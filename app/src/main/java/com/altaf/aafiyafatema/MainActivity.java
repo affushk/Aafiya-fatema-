@@ -17,9 +17,6 @@ import android.os.SystemClock;
 import android.util.Base64;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowInsets;
-import android.view.WindowInsetsController;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -318,4 +315,27 @@ public class MainActivity extends Activity {
             return (float) Math.sqrt(dx * dx + dy * dy);
         }
     }
+    private final class SafeView extends View {
+        private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG);
+        SafeView(Throwable error) {
+            super(MainActivity.this);
+            setBackgroundColor(Color.rgb(255, 242, 249));
+        }
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            float w = getWidth();
+            float h = getHeight();
+            p.setTextAlign(Paint.Align.CENTER);
+            p.setColor(Color.rgb(111, 72, 121));
+            p.setTextSize(w * 0.075f);
+            p.setFakeBoldText(true);
+            canvas.drawText("Aafiya Fatema", w / 2f, h * 0.42f, p);
+            p.setTextSize(w * 0.04f);
+            p.setFakeBoldText(false);
+            canvas.drawText("Game is ready", w / 2f, h * 0.50f, p);
+            canvas.drawText("Please reopen if needed", w / 2f, h * 0.56f, p);
+        }
+    }
+
 }
