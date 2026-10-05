@@ -1,21 +1,24 @@
-# Aafiya Fatema — Phase 1
+# Aafiya Fatema — Premium 3D
 
-A child-friendly Android virtual companion game created for Aafiya.
+A child-friendly Android virtual companion game for Aafiya Fatema.
 
-## Phase 1 included
-- Original **Aafiya Fatema** character
-- Mobile-first portrait game screen
-- Tap character reactions
-- Gentle idle floating animation and sparkles
+## Current build
+- Premium rigged 3D hijab character prototype
+- Neutral studio-style rendering instead of the old primitive sphere character
+- Animated idle / happy / waving / talking poses
+- Tap reactions
+- Offline voice recording + cute pitch repeat
 - Happiness, Food, Sleep and Clean meters
-- Food, Bath, Sleep and Play actions
-- Dress and Talk placeholders for later phases
-- Child-safe simple sound feedback + mute toggle
-- No ads, no paid API and no login required
-- GitHub Actions workflow that builds a debug APK
+- Food, Bath, Sleep, Dress, Talk and Play actions
+- No ads and no paid API
 
-## Download the APK
-Open **Actions** → **Build Android APK** → open the latest successful run → download **Aafiya-Fatema-Phase1-APK**.
+## 3D prototype asset attribution
+The premium rigged hijab GLB animation assets used in this prototype come from the MIT-licensed repository:
+FattahPradiptaK/LPK-Healthkathon-VA
 
-## Next
-Phase 2 will add voice recording/repeat, cute voice effect and lip-sync style reactions.
+3D rendering uses Google model-viewer 4.3.1 (Apache-2.0).
+
+The model is used as a quality prototype while the final Aafiya-specific baby-girl model is refined.
+
+## APK
+GitHub Actions automatically builds the APK after each update.
