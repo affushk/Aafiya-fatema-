@@ -115,7 +115,7 @@ public class MainActivity extends Activity {
 
             @Override
             public void onModelReady() {
-                setBubble("Aafiya Fatema is ready!");
+                setBubble("Tap Aafiya - live 3D");
             }
 
             @Override
@@ -137,8 +137,8 @@ public class MainActivity extends Activity {
         bubble.setBackground(roundRect(Color.argb(240, 255, 255, 255), dp(22)));
         FrameLayout.LayoutParams bubbleLp = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT, dp(50));
-        bubbleLp.gravity = Gravity.TOP | Gravity.CENTER_HORIZONTAL;
-        bubbleLp.topMargin = dp(10);
+        bubbleLp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+        bubbleLp.bottomMargin = dp(12);
         stage.addView(bubble, bubbleLp);
 
         TextView live = new TextView(this);
@@ -149,8 +149,8 @@ public class MainActivity extends Activity {
         live.setBackground(roundRect(Color.rgb(222, 77, 142), dp(12)));
         FrameLayout.LayoutParams liveLp = new FrameLayout.LayoutParams(dp(92), dp(28));
         liveLp.gravity = Gravity.TOP | Gravity.END;
-        liveLp.topMargin = dp(12);
-        liveLp.rightMargin = dp(12);
+        liveLp.topMargin = dp(8);
+        liveLp.rightMargin = dp(8);
         stage.addView(live, liveLp);
 
         root.addView(stage, new LinearLayout.LayoutParams(
