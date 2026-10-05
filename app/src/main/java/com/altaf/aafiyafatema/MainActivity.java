@@ -28,7 +28,7 @@ import java.io.File;
 public class MainActivity extends Activity {
     private static final int MIC_PERMISSION_REQUEST = 77;
 
-    private Aafiya3DView characterView;
+    private PremiumAvatarView characterView;
     private TextView bubble;
     private ProgressBar happyBar, foodBar, sleepBar, cleanBar;
 
@@ -103,18 +103,32 @@ public class MainActivity extends Activity {
         FrameLayout stage = new FrameLayout(this);
         stage.setBackground(roundRect(Color.argb(105, 255, 255, 255), dp(28)));
 
-        characterView = new Aafiya3DView(this);
-        characterView.setListener(() -> {
-            happy = Math.min(100, happy + 2);
-            happyBar.setProgress(happy);
-            setBubble("Hee hee! Aafiya is happy!");
+        characterView = new PremiumAvatarView(this);
+        characterView.setListener(new PremiumAvatarView.Listener() {
+            @Override
+            public void onCharacterTap() {
+                happy = Math.min(100, happy + 2);
+                happyBar.setProgress(happy);
+                setBubble("Aafiya is happy!");
+                characterView.wave();
+            }
+
+            @Override
+            public void onModelReady() {
+                setBubble("Aafiya Fatema is ready!");
+            }
+
+            @Override
+            public void onModelError(String message) {
+                setBubble("Premium 3D ke liye internet on rakho");
+            }
         });
         stage.addView(characterView, new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
                 FrameLayout.LayoutParams.MATCH_PARENT));
 
         bubble = new TextView(this);
-        bubble.setText("Tap the real 3D Aafiya Fatema");
+        bubble.setText("Premium 3D Aafiya Fatema loading...");
         bubble.setTextSize(17);
         bubble.setTextColor(Color.rgb(101, 66, 111));
         bubble.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
@@ -128,12 +142,12 @@ public class MainActivity extends Activity {
         stage.addView(bubble, bubbleLp);
 
         TextView live = new TextView(this);
-        live.setText("LIVE 3D");
+        live.setText("PREMIUM 3D");
         live.setTextSize(11);
         live.setTextColor(Color.WHITE);
         live.setGravity(Gravity.CENTER);
         live.setBackground(roundRect(Color.rgb(222, 77, 142), dp(12)));
-        FrameLayout.LayoutParams liveLp = new FrameLayout.LayoutParams(dp(68), dp(28));
+        FrameLayout.LayoutParams liveLp = new FrameLayout.LayoutParams(dp(92), dp(28));
         liveLp.gravity = Gravity.TOP | Gravity.END;
         liveLp.topMargin = dp(12);
         liveLp.rightMargin = dp(12);
@@ -152,7 +166,7 @@ public class MainActivity extends Activity {
             happy = Math.min(100, happy + 3);
             updateBars();
             setBubble("Yummy! Thank you!");
-            characterView.wave();
+            characterView.happy();
         });
 
         addAction(actions, "Bath", Color.rgb(83, 190, 219), () -> {
@@ -160,7 +174,7 @@ public class MainActivity extends Activity {
             happy = Math.min(100, happy + 2);
             updateBars();
             setBubble("Splish splash!");
-            characterView.wave();
+            characterView.happy();
         });
 
         addAction(actions, "Sleep", Color.rgb(142, 111, 226), () -> {
@@ -182,7 +196,7 @@ public class MainActivity extends Activity {
             sleep = Math.max(0, sleep - 3);
             updateBars();
             setBubble("Let's play!");
-            characterView.wave();
+            characterView.happy();
         });
 
         root.addView(actions, new LinearLayout.LayoutParams(
@@ -418,6 +432,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onDestroy() {
         cleanupAudio();
+        if (characterView != null) characterView.cleanup();
         super.onDestroy();
     }
 }
