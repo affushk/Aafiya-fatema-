@@ -85,7 +85,7 @@ public class Aafiya3DView extends GLSurfaceView {
         volatile long waveUntil = 0L;
 
         @Override
-        public void onSurfaceCreated(javax.microedition.khronos.egl.EGLConfig config) {
+        public void onSurfaceCreated(javax.microedition.khronos.opengles.GL10 gl, javax.microedition.khronos.egl.EGLConfig config) {
             GLES20.glClearColor(0.99f, 0.93f, 0.98f, 1f);
             GLES20.glEnable(GLES20.GL_DEPTH_TEST);
             GLES20.glEnable(GLES20.GL_BLEND);
