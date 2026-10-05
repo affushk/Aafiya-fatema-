@@ -1,0 +1,126 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+  <meta name="color-scheme" content="light">
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js"></script>
+  <style>
+    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;font-family:system-ui,-apple-system,sans-serif}
+    #wrap{
+      width:100%;height:100%;position:relative;overflow:hidden;
+      background:
+        radial-gradient(circle at 50% 28%,rgba(255,255,255,.96) 0,rgba(255,248,244,.82) 36%,rgba(243,238,246,.72) 72%,rgba(235,229,240,.55) 100%);
+    }
+    model-viewer{
+      width:100%;height:100%;background:transparent;
+      --poster-color:transparent;
+      --progress-bar-color:rgba(128,93,112,.25);
+    }
+    #status{
+      position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);
+      font-size:14px;font-weight:600;color:#786276;letter-spacing:.2px;
+      padding:10px 14px;border-radius:18px;background:rgba(255,255,255,.78);
+      box-shadow:0 8px 24px rgba(80,50,70,.08);
+      pointer-events:none;transition:opacity .25s ease;
+    }
+    #hint{
+      position:absolute;left:50%;bottom:12px;transform:translateX(-50%);
+      font-size:11px;color:rgba(93,74,90,.68);letter-spacing:.4px;
+      background:rgba(255,255,255,.58);padding:6px 11px;border-radius:999px;
+      pointer-events:none;
+    }
+  </style>
+</head>
+<body>
+<div id="wrap">
+  <model-viewer
+    id="avatar"
+    src="https://raw.githubusercontent.com/FattahPradiptaK/LPK-Healthkathon-VA/main/com.lpk.mobilejknva/assets/va_3d/Neutral_Idle.glb"
+    alt="Aafiya Fatema premium 3D character"
+    autoplay
+    interaction-prompt="none"
+    disable-zoom
+    shadow-intensity="0.65"
+    shadow-softness="0.9"
+    exposure="1.12"
+    tone-mapping="commerce"
+    camera-orbit="0deg 88deg 2.2m"
+    camera-target="0m 1.05m 0m"
+    field-of-view="25deg">
+  </model-viewer>
+  <div id="status">Premium 3D loading…</div>
+  <div id="hint">Tap Aafiya</div>
+</div>
+
+<script>
+(() => {
+  const base = 'https://raw.githubusercontent.com/FattahPradiptaK/LPK-Healthkathon-VA/main/com.lpk.mobilejknva/assets/va_3d/';
+  const poses = {
+    idle: base + 'Neutral_Idle.glb',
+    listen: base + 'Thinking.glb',
+    talk: base + 'Talking.glb',
+    wave: base + 'Waving.glb',
+    happy: base + 'Happy.glb'
+  };
+
+  const mv = document.getElementById('avatar');
+  const status = document.getElementById('status');
+  let timer = null;
+  let current = 'idle';
+
+  function notifyReady(){
+    status.style.opacity='0';
+    setTimeout(()=>status.style.display='none',260);
+    try{ Android.modelReady(); }catch(e){}
+  }
+
+  function notifyError(message){
+    status.style.display='block';
+    status.style.opacity='1';
+    status.textContent='3D model load issue';
+    try{ Android.modelError(String(message||'load error')); }catch(e){}
+  }
+
+  mv.addEventListener('load', () => {
+    notifyReady();
+    try { mv.play(); } catch(e) {}
+  });
+
+  mv.addEventListener('error', e => notifyError(e && e.detail ? e.detail : 'model error'));
+
+  mv.addEventListener('click', () => {
+    try{ Android.characterTapped(); }catch(e){}
+  });
+
+  window.setAafiyaPose = function(name){
+    const next = poses[name] ? name : 'idle';
+    if(timer){ clearTimeout(timer); timer=null; }
+    current = next;
+
+    const url = poses[next];
+    if(mv.getAttribute('src') !== url){
+      status.style.display='block';
+      status.style.opacity='0.7';
+      status.textContent='Changing expression…';
+      mv.setAttribute('src', url);
+    } else {
+      try { mv.currentTime = 0; mv.play(); } catch(e) {}
+    }
+
+    if(next === 'wave' || next === 'happy'){
+      timer = setTimeout(() => {
+        if(current === next) window.setAafiyaPose('idle');
+      }, 2700);
+    }
+  };
+})();
+</script>
+
+<!--
+Prototype uses MIT-licensed animated hijab GLB assets from:
+FattahPradiptaK/LPK-Healthkathon-VA
+Renderer: Google <model-viewer> (Apache-2.0)
+-->
+</body>
+</html>
