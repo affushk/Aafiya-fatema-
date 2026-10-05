@@ -1,126 +1,263 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-  <meta name="color-scheme" content="light">
-  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.3.1/model-viewer.min.js"></script>
-  <style>
-    html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent;font-family:system-ui,-apple-system,sans-serif}
-    #wrap{
-      width:100%;height:100%;position:relative;overflow:hidden;
-      background:
-        radial-gradient(circle at 50% 28%,rgba(255,255,255,.96) 0,rgba(255,248,244,.82) 36%,rgba(243,238,246,.72) 72%,rgba(235,229,240,.55) 100%);
-    }
-    model-viewer{
-      width:100%;height:100%;background:transparent;
-      --poster-color:transparent;
-      --progress-bar-color:rgba(128,93,112,.25);
-    }
-    #status{
-      position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);
-      font-size:14px;font-weight:600;color:#786276;letter-spacing:.2px;
-      padding:10px 14px;border-radius:18px;background:rgba(255,255,255,.78);
-      box-shadow:0 8px 24px rgba(80,50,70,.08);
-      pointer-events:none;transition:opacity .25s ease;
-    }
-    #hint{
-      position:absolute;left:50%;bottom:12px;transform:translateX(-50%);
-      font-size:11px;color:rgba(93,74,90,.68);letter-spacing:.4px;
-      background:rgba(255,255,255,.58);padding:6px 11px;border-radius:999px;
-      pointer-events:none;
-    }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}
+canvas{display:block;width:100%;height:100%;touch-action:none}
+#load{position:absolute;inset:auto 0 48% 0;text-align:center;font:600 13px system-ui;color:#756276;pointer-events:none}
+</style>
 </head>
 <body>
-<div id="wrap">
-  <model-viewer
-    id="avatar"
-    src="https://raw.githubusercontent.com/FattahPradiptaK/LPK-Healthkathon-VA/main/com.lpk.mobilejknva/assets/va_3d/Neutral_Idle.glb"
-    alt="Aafiya Fatema premium 3D character"
-    autoplay
-    interaction-prompt="none"
-    disable-zoom
-    shadow-intensity="0.65"
-    shadow-softness="0.9"
-    exposure="1.12"
-    tone-mapping="commerce"
-    camera-orbit="0deg 88deg 2.2m"
-    camera-target="0m 1.05m 0m"
-    field-of-view="25deg">
-  </model-viewer>
-  <div id="status">Premium 3D loading…</div>
-  <div id="hint">Tap Aafiya</div>
-</div>
-
-<script>
-(() => {
-  const base = 'https://raw.githubusercontent.com/FattahPradiptaK/LPK-Healthkathon-VA/main/com.lpk.mobilejknva/assets/va_3d/';
-  const poses = {
-    idle: base + 'Neutral_Idle.glb',
-    listen: base + 'Thinking.glb',
-    talk: base + 'Talking.glb',
-    wave: base + 'Waving.glb',
-    happy: base + 'Happy.glb'
-  };
-
-  const mv = document.getElementById('avatar');
-  const status = document.getElementById('status');
-  let timer = null;
-  let current = 'idle';
-
-  function notifyReady(){
-    status.style.opacity='0';
-    setTimeout(()=>status.style.display='none',260);
-    try{ Android.modelReady(); }catch(e){}
-  }
-
-  function notifyError(message){
-    status.style.display='block';
-    status.style.opacity='1';
-    status.textContent='3D model load issue';
-    try{ Android.modelError(String(message||'load error')); }catch(e){}
-  }
-
-  mv.addEventListener('load', () => {
-    notifyReady();
-    try { mv.play(); } catch(e) {}
-  });
-
-  mv.addEventListener('error', e => notifyError(e && e.detail ? e.detail : 'model error'));
-
-  mv.addEventListener('click', () => {
-    try{ Android.characterTapped(); }catch(e){}
-  });
-
-  window.setAafiyaPose = function(name){
-    const next = poses[name] ? name : 'idle';
-    if(timer){ clearTimeout(timer); timer=null; }
-    current = next;
-
-    const url = poses[next];
-    if(mv.getAttribute('src') !== url){
-      status.style.display='block';
-      status.style.opacity='0.7';
-      status.textContent='Changing expression…';
-      mv.setAttribute('src', url);
-    } else {
-      try { mv.currentTime = 0; mv.play(); } catch(e) {}
-    }
-
-    if(next === 'wave' || next === 'happy'){
-      timer = setTimeout(() => {
-        if(current === next) window.setAafiyaPose('idle');
-      }, 2700);
-    }
-  };
-})();
+<div id="load">Aafiya 3D loading…</div>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
 </script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
-<!--
-Prototype uses MIT-licensed animated hijab GLB assets from:
-FattahPradiptaK/LPK-Healthkathon-VA
-Renderer: Google <model-viewer> (Apache-2.0)
--->
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(27,1,.05,20);
+camera.position.set(0,.66,3.05);
+camera.lookAt(0,.58,0);
+
+const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.12;
+renderer.shadowMap.enabled=true;
+renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(0xfff8f4,0x8a718d,2.0));
+const key=new THREE.DirectionalLight(0xffffff,3.1); key.position.set(-2.4,3.8,4.2); key.castShadow=true; scene.add(key);
+const fill=new THREE.DirectionalLight(0xffd8e7,1.45); fill.position.set(3,2,2.2); scene.add(fill);
+const rim=new THREE.DirectionalLight(0xb8d7ff,1.0); rim.position.set(-2,2,-3); scene.add(rim);
+
+const floor=new THREE.Mesh(new THREE.CircleGeometry(.72,64),new THREE.MeshStandardMaterial({color:0xe8dce8,transparent:true,opacity:.44,roughness:1}));
+floor.rotation.x=-Math.PI/2; floor.position.y=-.015; floor.receiveShadow=true; scene.add(floor);
+
+let actor=null, state='idle', stateUntil=0;
+const bones={}, restQuat=new Map();
+
+function fit(){
+  const w=Math.max(1,innerWidth),h=Math.max(1,innerHeight);
+  renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
+}
+addEventListener('resize',fit); fit();
+
+function n(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+function findBone(root,keys){
+  let hit=null;
+  root.traverse(o=>{
+    if(hit||!o.isBone)return;
+    const z=n(o.name);
+    if(keys.some(k=>z.includes(k))) hit=o;
+  });
+  return hit;
+}
+
+function deformPoint(p){
+  const hip=.95, neck=1.56;
+  const leg=.55, torso=.62, head=1.0, shoulders=.77, waist=.83, hips=.86, arms=.66, headWidth=1.27, chest=.82, belly=.88;
+  const y=p.y;
+  let ny;
+  if(y<hip) ny=y*leg;
+  else if(y<neck) ny=hip*leg+(y-hip)*torso;
+  else ny=hip*leg+(neck-hip)*torso+(y-neck)*head;
+
+  const lerp=(a,b,t)=>a+(b-a)*Math.max(0,Math.min(1,t));
+  let width;
+  if(y<hip) width=hips;
+  else if(y<1.13) width=lerp(hips,waist,(y-hip)/.18);
+  else if(y<1.43) width=lerp(waist,shoulders,(y-1.13)/.30);
+  else width=lerp(shoulders,headWidth,(y-1.43)/.21);
+
+  const armMix=Math.max(0,Math.min(1,(Math.abs(p.x)-.28)/.17));
+  const wx=lerp(width,arms,armMix);
+
+  let depth;
+  if(y<.82) depth=hips;
+  else if(y<1.08) depth=lerp(hips,belly,(y-.82)/.26);
+  else if(y<1.30) depth=lerp(belly,chest,(y-1.08)/.22);
+  else depth=lerp(chest,headWidth,(y-1.30)/.34);
+
+  p.set(p.x*wx,ny,p.z*depth);
+  return p;
+}
+
+function reshapeChild(root){
+  root.updateMatrixWorld(true);
+  const rootWorld=root.matrixWorld.clone(), worldRoot=rootWorld.clone().invert();
+  const skinned=[], boneList=[], original=new Map();
+
+  root.traverse(o=>{
+    if(o.isBone){boneList.push(o);original.set(o,o.getWorldPosition(new THREE.Vector3()).applyMatrix4(worldRoot));}
+    if(o.isSkinnedMesh) skinned.push(o);
+  });
+
+  for(const mesh of skinned){
+    const g=mesh.geometry.clone();
+    const a=g.attributes.position;
+    const mw=mesh.matrixWorld.clone(), wm=mw.clone().invert();
+    const p=new THREE.Vector3();
+    for(let i=0;i<a.count;i++){
+      p.fromBufferAttribute(a,i).applyMatrix4(mw).applyMatrix4(worldRoot);
+      deformPoint(p).applyMatrix4(rootWorld).applyMatrix4(wm);
+      a.setXYZ(i,p.x,p.y,p.z);
+    }
+    a.needsUpdate=true; g.computeVertexNormals(); g.computeBoundingBox(); g.computeBoundingSphere(); mesh.geometry=g;
+  }
+
+  for(const b of boneList){
+    const inv=b.parent?b.parent.matrixWorld.clone().invert():new THREE.Matrix4();
+    const q=deformPoint(original.get(b).clone()).applyMatrix4(rootWorld).applyMatrix4(inv);
+    b.position.copy(q); b.updateMatrixWorld(true);
+  }
+  root.updateMatrixWorld(true);
+  [...new Set(skinned.map(m=>m.skeleton))].forEach(s=>s.calculateInverses());
+}
+
+function skinMaterials(root){
+  const skin=new THREE.MeshPhysicalMaterial({color:0xe7ad8e,roughness:.58,metalness:0,clearcoat:.08,clearcoatRoughness:.65});
+  const eyeWhite=new THREE.MeshPhysicalMaterial({color:0xfffcf7,roughness:.28,clearcoat:.22});
+  const eyeDark=new THREE.MeshPhysicalMaterial({color:0x321e18,roughness:.18,clearcoat:.55});
+  const brow=new THREE.MeshStandardMaterial({color:0x4a2a20,roughness:.9});
+
+  root.traverse(o=>{
+    if(!o.isMesh)return;
+    o.castShadow=true; o.receiveShadow=true;
+    const z=n(o.name);
+    if(z.includes('eyebrow')||z.includes('brow')) o.material=brow;
+    else if(z.includes('eye')||z.includes('iris')){
+      o.material=z.includes('white')?eyeWhite:eyeDark;
+    } else o.material=skin;
+  });
+}
+
+function addHijabDress(root){
+  const pink=new THREE.MeshPhysicalMaterial({color:0xd88aa4,roughness:.72,metalness:0,clearcoat:.04});
+  const pink2=new THREE.MeshPhysicalMaterial({color:0xb96f8d,roughness:.78,metalness:0});
+  const cream=new THREE.MeshPhysicalMaterial({color:0xfff4e8,roughness:.78});
+  const group=new THREE.Group(); group.name='AafiyaClothes';
+
+  // Face-opening hijab ring
+  const ring=new THREE.Mesh(new THREE.TorusGeometry(.305,.095,32,72),pink);
+  ring.position.set(0,1.005,.205); ring.scale.set(1.03,1.13,.88); ring.castShadow=true; group.add(ring);
+
+  // Back/top scarf volume behind face
+  const hood=new THREE.Mesh(new THREE.SphereGeometry(.355,48,32),pink);
+  hood.position.set(0,1.005,-.105); hood.scale.set(1.03,1.13,.90); hood.castShadow=true; group.add(hood);
+
+  // Cover center-front of hood with a skin-toned face opening mask by letting the actual face sit forward
+  hood.renderOrder=0; ring.renderOrder=2;
+
+  // Shoulder drape
+  const drape=new THREE.Mesh(new THREE.SphereGeometry(.40,48,24),pink2);
+  drape.position.set(0,.755,-.02); drape.scale.set(1.25,.42,.72); drape.castShadow=true; group.add(drape);
+
+  // A-line dress
+  const dress=new THREE.Mesh(new THREE.CylinderGeometry(.255,.49,.72,64,1,false),pink);
+  dress.position.set(0,.39,.00); dress.castShadow=true; group.add(dress);
+  const hem=new THREE.Mesh(new THREE.TorusGeometry(.475,.032,18,64),cream);
+  hem.position.set(0,.035,0); hem.rotation.x=Math.PI/2; group.add(hem);
+
+  // Waist detail
+  const belt=new THREE.Mesh(new THREE.TorusGeometry(.285,.026,16,64),pink2);
+  belt.position.set(0,.62,0); belt.rotation.x=Math.PI/2; group.add(belt);
+
+  // Small bow
+  const bowL=new THREE.Mesh(new THREE.SphereGeometry(.075,24,16),cream); bowL.position.set(-.07,.64,.29); bowL.scale.set(1.4,.72,.55); group.add(bowL);
+  const bowR=bowL.clone(); bowR.position.x=.07; group.add(bowR);
+  const knot=new THREE.Mesh(new THREE.SphereGeometry(.035,18,12),pink2); knot.position.set(0,.64,.335); group.add(knot);
+
+  root.add(group);
+}
+
+function cacheBones(root){
+  const map={
+    head:['head'],
+    neck:['neck'],
+    rUpper:['upperarmr','rightupperarm','armr'],
+    rLower:['lowerarmr','forearmr','rightforearm'],
+    lUpper:['upperarml','leftupperarm','arml']
+  };
+  for(const [k,keys] of Object.entries(map)){bones[k]=findBone(root,keys);}
+  root.traverse(o=>{if(o.isBone)restQuat.set(o,o.quaternion.clone());});
+}
+
+function resetPose(){
+  for(const [b,q] of restQuat) b.quaternion.copy(q);
+}
+function addRot(b,x=0,y=0,z=0){
+  if(!b)return;
+  const q=restQuat.get(b)||b.quaternion.clone();
+  b.quaternion.copy(q).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(x,y,z)));
+}
+
+const url='https://raw.githubusercontent.com/glanderness/BeefTV/main/web/public/canvas/models/quaternius-standard-female.glb';
+new GLTFLoader().load(url,g=>{
+  actor=g.scene;
+  reshapeChild(actor);
+  skinMaterials(actor);
+  addHijabDress(actor);
+  cacheBones(actor);
+  actor.scale.setScalar(1.42);
+  actor.position.y=.015;
+  scene.add(actor);
+  document.getElementById('load').style.display='none';
+  try{Android.modelReady()}catch(e){}
+},undefined,e=>{
+  document.getElementById('load').textContent='3D model load issue';
+  try{Android.modelError(String(e))}catch(x){}
+});
+
+window.setAafiyaPose=(name)=>{
+  state=['idle','wave','happy','talk','listen'].includes(name)?name:'idle';
+  stateUntil=performance.now()+((state==='wave'||state==='happy')?2300:9999999);
+};
+
+renderer.domElement.addEventListener('click',()=>{
+  window.setAafiyaPose('wave');
+  try{Android.characterTapped()}catch(e){}
+});
+
+const clock=new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const t=performance.now()/1000;
+  if(actor){
+    if((state==='wave'||state==='happy')&&performance.now()>stateUntil) state='idle';
+    resetPose();
+    actor.position.y=.015+Math.sin(t*2.0)*.006;
+    actor.rotation.y=Math.sin(t*.65)*.018;
+
+    if(state==='listen'){
+      addRot(bones.head,.04,0,.10*Math.sin(t*2.4));
+    }else if(state==='talk'){
+      addRot(bones.head,.035*Math.sin(t*7),.03*Math.sin(t*3),0);
+      actor.position.y+=Math.abs(Math.sin(t*7))*.006;
+    }else if(state==='wave'){
+      addRot(bones.rUpper,-.25,0,-1.10);
+      addRot(bones.rLower,0,0,-.75+.22*Math.sin(t*8));
+      addRot(bones.head,0,0,.035);
+    }else if(state==='happy'){
+      addRot(bones.lUpper,0,0,.15);
+      addRot(bones.rUpper,0,0,-.15);
+      actor.position.y+=Math.abs(Math.sin(t*5))*.018;
+      addRot(bones.head,0,.06*Math.sin(t*3),0);
+    }else{
+      addRot(bones.head,.012*Math.sin(t*1.5),.018*Math.sin(t*.8),0);
+    }
+    actor.updateMatrixWorld(true);
+  }
+  renderer.render(scene,camera);
+}
+animate();
+</script>
 </body>
 </html>
