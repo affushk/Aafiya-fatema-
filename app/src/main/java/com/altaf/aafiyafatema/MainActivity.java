@@ -1,6 +1,8 @@
 package com.altaf.aafiyafatema;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -12,25 +14,63 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
+import android.media.MediaRecorder;
+import android.media.MediaPlayer;
+import android.media.PlaybackParams;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Base64;
 import android.view.MotionEvent;
 import android.view.View;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.io.File;
 import java.util.Random;
 
 public class MainActivity extends Activity {
+    private static final int MIC_PERMISSION_REQUEST = 77;
+    private GameView gameView;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         try {
-            setContentView(new GameView());
+            gameView = new GameView();
+            setContentView(gameView);
         } catch (Throwable startupError) {
             setContentView(new SafeView(startupError));
         }
+    }
+
+    private void requestMicOrStart() {
+        if (gameView == null) return;
+        if (android.os.Build.VERSION.SDK_INT < 23 ||
+                checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+            gameView.startVoiceRepeat();
+        } else {
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_REQUEST);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == MIC_PERMISSION_REQUEST && gameView != null) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                gameView.startVoiceRepeat();
+            } else {
+                gameView.showMessage("Microphone permission needed");
+            }
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (gameView != null) gameView.cleanupAudio();
     }
 
     private final class GameView extends View {
@@ -38,6 +78,11 @@ public class MainActivity extends Activity {
         private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Random random = new Random();
         private ToneGenerator tone;
+        private MediaRecorder recorder;
+        private MediaPlayer player;
+        private final Handler handler = new Handler(Looper.getMainLooper());
+        private boolean listening = false;
+        private boolean speaking = false;
         private final Bitmap character;
 
         private final String[] reactions = {
@@ -140,7 +185,9 @@ public class MainActivity extends Activity {
 
         private void drawCharacter(Canvas canvas, int w, int h) {
             float top = w * 0.29f, bottom = h * 0.70f;
-            float bounce = (float) Math.sin(SystemClock.uptimeMillis() / 620.0) * w * 0.008f;
+            double speed = speaking ? 115.0 : (listening ? 240.0 : 620.0);
+            float amp = speaking ? w * 0.020f : (listening ? w * 0.012f : w * 0.008f);
+            float bounce = (float) Math.sin(SystemClock.uptimeMillis() / speed) * amp;
 
             RectF shadow = new RectF(w * 0.25f, bottom - w * 0.015f, w * 0.75f, bottom + w * 0.04f);
             paint.setColor(Color.argb(35, 90, 50, 100));
@@ -279,13 +326,123 @@ public class MainActivity extends Activity {
                 case 3:
                     react("Dress room comes in Phase 3", 5); break;
                 case 4:
-                    react("Talking voice comes in Phase 2", 6); break;
+                    MainActivity.this.requestMicOrStart(); break;
                 case 5:
                     happiness = clamp(happiness + 8);
                     food = clamp(food - 2);
                     sleep = clamp(sleep - 3);
                     react("Let's play!", 7); break;
             }
+        }
+
+        void showMessage(String message) {
+            bubble = message;
+            reactionUntil = SystemClock.uptimeMillis() + 2600;
+            invalidate();
+        }
+
+        void startVoiceRepeat() {
+            if (listening || speaking) {
+                showMessage("Wait... Aafiya is talking");
+                return;
+            }
+            cleanupAudio();
+            try {
+                File voiceFile = new File(getCacheDir(), "aafiya_voice.m4a");
+                recorder = new MediaRecorder();
+                recorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+                recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+                recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+                recorder.setAudioEncodingBitRate(96000);
+                recorder.setAudioSamplingRate(44100);
+                recorder.setOutputFile(voiceFile.getAbsolutePath());
+                recorder.prepare();
+                recorder.start();
+
+                listening = true;
+                bubble = "I'm listening... say something!";
+                reactionUntil = SystemClock.uptimeMillis() + 5000;
+                invalidate();
+
+                handler.postDelayed(this::stopAndReplay, 3500);
+            } catch (Throwable error) {
+                cleanupAudio();
+                showMessage("Microphone couldn't start");
+            }
+        }
+
+        private void stopAndReplay() {
+            if (!listening) return;
+            try {
+                if (recorder != null) recorder.stop();
+            } catch (Throwable ignored) { }
+            try {
+                if (recorder != null) recorder.release();
+            } catch (Throwable ignored) { }
+            recorder = null;
+            listening = false;
+
+            if (muted) {
+                showMessage("Sound is OFF - tap SND first");
+                return;
+            }
+
+            try {
+                File voiceFile = new File(getCacheDir(), "aafiya_voice.m4a");
+                player = new MediaPlayer();
+                player.setDataSource(voiceFile.getAbsolutePath());
+                player.prepare();
+                try {
+                    PlaybackParams params = new PlaybackParams();
+                    params.setPitch(1.35f);
+                    params.setSpeed(1.04f);
+                    player.setPlaybackParams(params);
+                } catch (Throwable ignored) { }
+
+                speaking = true;
+                bubble = "Aafiya Fatema says...";
+                reactionUntil = SystemClock.uptimeMillis() + 6000;
+                happiness = clamp(happiness + 5);
+                player.setOnCompletionListener(mp -> {
+                    speaking = false;
+                    try { mp.release(); } catch (Throwable ignored) { }
+                    player = null;
+                    showMessage("Hee hee! Say it again!");
+                });
+                player.setOnErrorListener((mp, what, extra) -> {
+                    speaking = false;
+                    try { mp.release(); } catch (Throwable ignored) { }
+                    player = null;
+                    showMessage("Let's try again");
+                    return true;
+                });
+                player.start();
+                invalidate();
+            } catch (Throwable error) {
+                speaking = false;
+                cleanupAudio();
+                showMessage("I couldn't repeat that - try again");
+            }
+        }
+
+        void cleanupAudio() {
+            handler.removeCallbacksAndMessages(null);
+            listening = false;
+            speaking = false;
+            try {
+                if (recorder != null) recorder.stop();
+            } catch (Throwable ignored) { }
+            try {
+                if (recorder != null) recorder.release();
+            } catch (Throwable ignored) { }
+            recorder = null;
+            try {
+                if (player != null) {
+                    player.stop();
+                    player.release();
+                }
+            } catch (Throwable ignored) { }
+            player = null;
         }
 
         private void react(String message, int toneIndex) {
