@@ -104,10 +104,10 @@ public class Aafiya3DView extends GLSurfaceView {
         public void onSurfaceChanged(javax.microedition.khronos.opengles.GL10 gl, int width, int height) {
             GLES20.glViewport(0, 0, width, height);
             float aspect = width / (float) Math.max(1, height);
-            Matrix.perspectiveM(projection, 0, 35f, aspect, 1f, 20f);
+            Matrix.perspectiveM(projection, 0, 31.5f, aspect, 1f, 20f);
             Matrix.setLookAtM(view, 0,
-                    0f, 0.15f, 7.4f,
-                    0f, -0.35f, 0f,
+                    0f, 0.10f, 8.45f,
+                    0f, -0.42f, 0f,
                     0f, 1f, 0f);
             Matrix.multiplyMM(pv, 0, projection, 0, view, 0);
         }
@@ -129,87 +129,112 @@ public class Aafiya3DView extends GLSurfaceView {
         private void drawCharacter(long now, float bob) {
             float blinkPhase = (now % 3600L);
             float blink = blinkPhase > 3300 && blinkPhase < 3460 ? 0.08f : 1f;
-            float talk = speaking ? 0.10f + 0.16f * Math.abs((float) Math.sin(now * 0.030)) : 0.055f;
-            float nod = listening ? (float) Math.sin(now * 0.008) * 4.0f : 0f;
+            float talk = speaking ? 0.055f + 0.12f * Math.abs((float) Math.sin(now * 0.030)) : 0.035f;
+            float idleSway = (float)Math.sin(now * 0.0014) * 2.2f;
+            float listenNod = listening ? (float)Math.sin(now * 0.008) * 2.8f : 0f;
 
-            // Legs and shoes
-            part(-0.34f, -2.15f + bob, 0.00f, 0.25f, 0.68f, 0.25f, 0, 0, 0, CREAM);
-            part( 0.34f, -2.15f + bob, 0.00f, 0.25f, 0.68f, 0.25f, 0, 0, 0, CREAM);
-            part(-0.34f, -2.72f + bob, 0.17f, 0.38f, 0.25f, 0.52f, -4, 0, 0, PINK);
-            part( 0.34f, -2.72f + bob, 0.17f, 0.38f, 0.25f, 0.52f, -4, 0, 0, PINK);
+            // Slim toddler legs
+            part(-0.25f, -2.20f + bob, 0.02f, 0.17f, 0.52f, 0.17f, 0, 0, -2, CREAM);
+            part( 0.25f, -2.20f + bob, 0.02f, 0.17f, 0.52f, 0.17f, 0, 0,  2, CREAM);
 
-            // Dress and torso
-            part(0f, -1.22f + bob, 0f, 0.92f, 1.12f, 0.62f, 0, 0, 0, PINK);
-            part(0f, -1.68f + bob, 0f, 1.12f, 0.82f, 0.80f, 0, 0, 0, PINK);
-            part(0f, -1.47f + bob, 0.66f, 0.22f, 0.18f, 0.09f, 0, 0, 0, CREAM);
+            // Small rounded shoes
+            part(-0.25f, -2.62f + bob, 0.18f, 0.30f, 0.17f, 0.38f, -7, 0, -2, PINK);
+            part( 0.25f, -2.62f + bob, 0.18f, 0.30f, 0.17f, 0.38f, -7, 0,  2, PINK);
+            part(-0.25f, -2.61f + bob, 0.48f, 0.13f, 0.07f, 0.08f, 0, 0, 0, CREAM);
+            part( 0.25f, -2.61f + bob, 0.48f, 0.13f, 0.07f, 0.08f, 0, 0, 0, CREAM);
+
+            // Petite upper body and flared layered dress
+            part(0f, -1.20f + bob, 0f, 0.56f, 0.66f, 0.40f, 0, 0, 0, PINK);
+            part(0f, -1.63f + bob, -0.02f, 0.78f, 0.56f, 0.52f, 0, 0, 0, PINK);
+            part(0f, -1.91f + bob, -0.01f, 0.92f, 0.33f, 0.62f, 0, 0, 0, PINK_DARK);
+            part(0f, -1.92f + bob, 0.49f, 0.76f, 0.08f, 0.07f, 0, 0, 0, CREAM);
+
+            // Waist bow
+            part(-0.15f, -1.36f + bob, 0.48f, 0.22f, 0.13f, 0.09f, 0, 0, -25, CREAM);
+            part( 0.15f, -1.36f + bob, 0.48f, 0.22f, 0.13f, 0.09f, 0, 0,  25, CREAM);
+            part( 0.00f, -1.36f + bob, 0.56f, 0.09f, 0.09f, 0.07f, 0, 0, 0, PINK_DARK);
 
             // Neck
-            part(0f, -0.15f + bob, 0.10f, 0.28f, 0.34f, 0.28f, 0, 0, 0, SKIN);
+            part(0f, -0.33f + bob, 0.07f, 0.19f, 0.24f, 0.18f, 0, 0, 0, SKIN);
 
-            // Hijab shell behind face
-            part(0f, 0.78f + bob, -0.10f, 1.12f, 1.25f, 0.93f, nod, 0, 0, PINK);
-            // Hijab shoulder drape
-            part(0f, -0.12f + bob, -0.07f, 1.08f, 0.58f, 0.62f, 0, 0, 0, PINK_DARK);
+            // Hijab outer shell — soft rounded baby shape
+            part(0f, 0.66f + bob, -0.08f, 0.92f, 1.02f, 0.72f, idleSway + listenNod, 0, 0, PINK);
+            // Shoulder drape kept compact, not bulky
+            part(0f, -0.15f + bob, -0.06f, 0.78f, 0.42f, 0.48f, 0, 0, 0, PINK_DARK);
 
-            // Face in front of hijab
-            part(0f, 0.83f + bob, 0.55f, 0.82f, 0.91f, 0.69f, nod, 0, 0, SKIN);
+            // Face larger than body for cute baby proportions
+            part(0f, 0.72f + bob, 0.53f, 0.70f, 0.77f, 0.58f, idleSway + listenNod, 0, 0, SKIN);
 
-            // Small scarf/bow accents
-            part(-0.78f, 1.56f + bob, 0.25f, 0.30f, 0.20f, 0.18f, 0, 0, -25, PINK_DARK);
-            part(-0.55f, 1.68f + bob, 0.20f, 0.25f, 0.18f, 0.16f, 0, 0, 25, PINK_DARK);
-            part(-0.66f, 1.62f + bob, 0.37f, 0.10f, 0.10f, 0.08f, 0, 0, 0, CREAM);
+            // Soft forehead opening / inner cap
+            part(0f, 1.36f + bob, 0.66f, 0.55f, 0.15f, 0.15f, 0, 0, 0, CREAM);
 
-            // Eyes
-            eye(-0.29f, 1.05f + bob, 1.08f, blink);
-            eye( 0.29f, 1.05f + bob, 1.08f, blink);
+            // Side hijab bow + flower center
+            part(-0.69f, 1.37f + bob, 0.22f, 0.24f, 0.16f, 0.13f, 0, 0, -28, PINK_DARK);
+            part(-0.50f, 1.48f + bob, 0.22f, 0.21f, 0.14f, 0.12f, 0, 0,  28, PINK_DARK);
+            part(-0.59f, 1.43f + bob, 0.36f, 0.085f, 0.085f, 0.065f, 0, 0, 0, CREAM);
+            part(-0.59f, 1.43f + bob, 0.42f, 0.040f, 0.040f, 0.035f, 0, 0, 0, new float[]{1f,0.77f,0.35f,1f});
+
+            // Large expressive eyes
+            eye(-0.245f, 0.93f + bob, 1.01f, blink);
+            eye( 0.245f, 0.93f + bob, 1.01f, blink);
 
             // Brows
-            part(-0.30f, 1.34f + bob, 1.02f, 0.25f, 0.055f, 0.055f, 0, 0, -8, BROWN);
-            part( 0.30f, 1.34f + bob, 1.02f, 0.25f, 0.055f, 0.055f, 0, 0, 8, BROWN);
+            part(-0.25f, 1.19f + bob, 0.96f, 0.20f, 0.035f, 0.040f, 0, 0, -7, BROWN);
+            part( 0.25f, 1.19f + bob, 0.96f, 0.20f, 0.035f, 0.040f, 0, 0,  7, BROWN);
 
-            // Nose and cheeks
-            part(0f, 0.91f + bob, 1.16f, 0.09f, 0.10f, 0.07f, 0, 0, 0, new float[]{0.95f,0.57f,0.48f,1f});
-            part(-0.48f, 0.78f + bob, 1.00f, 0.16f, 0.10f, 0.06f, 0, 0, 0, new float[]{1f,0.52f,0.58f,0.35f});
-            part( 0.48f, 0.78f + bob, 1.00f, 0.16f, 0.10f, 0.06f, 0, 0, 0, new float[]{1f,0.52f,0.58f,0.35f});
+            // Tiny nose
+            part(0f, 0.77f + bob, 1.08f, 0.065f, 0.072f, 0.050f, 0, 0, 0,
+                    new float[]{0.96f,0.61f,0.52f,1f});
 
-            // Mouth
-            part(0f, 0.60f + bob, 1.13f, 0.24f, talk, 0.065f, 0, 0, 0, PINK_DARK);
+            // Rosy cheeks
+            part(-0.40f, 0.63f + bob, 0.95f, 0.12f, 0.070f, 0.042f, 0, 0, 0,
+                    new float[]{1f,0.50f,0.58f,0.32f});
+            part( 0.40f, 0.63f + bob, 0.95f, 0.12f, 0.070f, 0.042f, 0, 0, 0,
+                    new float[]{1f,0.50f,0.58f,0.32f});
+
+            // Small smiling mouth, animated while speaking
+            part(0f, 0.48f + bob, 1.07f, 0.17f, talk, 0.046f, 0, 0, 0, PINK_DARK);
             if (speaking) {
-                part(0f, 0.59f + bob, 1.18f, 0.13f, talk * 0.52f, 0.035f, 0, 0, 0, BLACK);
+                part(0f, 0.475f + bob, 1.105f, 0.092f, Math.max(0.028f, talk * 0.48f), 0.025f, 0, 0, 0, BLACK);
             }
 
-            // Arms; right arm waves after a tap
+            // Slim sleeves and arms
             boolean wave = now < waveUntil;
-            float waveAngle = wave ? -48f + 26f * (float)Math.sin(now * 0.018) : -12f;
-            float rightX = wave ? 1.02f : 0.91f;
-            float rightY = wave ? -0.20f : -0.78f;
-            part(-0.92f, -0.75f + bob, 0.08f, 0.28f, 0.88f, 0.30f, 0, 0, 13, CREAM);
-            part(rightX, rightY + bob, 0.08f, 0.28f, 0.88f, 0.30f, 0, 0, waveAngle, CREAM);
+            float waveAngle = wave ? -52f + 18f * (float)Math.sin(now * 0.018) : -10f;
+            part(-0.63f, -0.86f + bob, 0.03f, 0.18f, 0.63f, 0.19f, 0, 0, 11, CREAM);
 
-            // Hands
-            part(-1.04f, -1.37f + bob, 0.14f, 0.25f, 0.28f, 0.24f, 0, 0, 0, SKIN);
             if (wave) {
-                part(1.36f, 0.37f + bob, 0.10f, 0.26f, 0.29f, 0.24f, 0, 0, 0, SKIN);
+                part(0.72f, -0.46f + bob, 0.03f, 0.18f, 0.62f, 0.19f, 0, 0, waveAngle, CREAM);
+                part(1.02f, 0.02f + bob, 0.05f, 0.18f, 0.20f, 0.17f, 0, 0, 0, SKIN);
             } else {
-                part(1.03f, -1.38f + bob, 0.14f, 0.25f, 0.28f, 0.24f, 0, 0, 0, SKIN);
+                part(0.63f, -0.86f + bob, 0.03f, 0.18f, 0.63f, 0.19f, 0, 0, -11, CREAM);
+                part(0.70f, -1.34f + bob, 0.08f, 0.18f, 0.20f, 0.17f, 0, 0, 0, SKIN);
             }
 
-            // Purse
-            part(-0.90f, -1.48f + bob, 0.65f, 0.42f, 0.43f, 0.16f, 0, 0, -10, CREAM);
-            part(-0.90f, -1.50f + bob, 0.82f, 0.10f, 0.08f, 0.04f, 0, 0, 0, PINK_DARK);
+            part(-0.70f, -1.34f + bob, 0.08f, 0.18f, 0.20f, 0.17f, 0, 0, 0, SKIN);
+
+            // Small purse only, kept away from hands
+            part(-0.72f, -1.56f + bob, 0.49f, 0.30f, 0.30f, 0.12f, 0, 0, -8, CREAM);
+            part(-0.72f, -1.56f + bob, 0.61f, 0.080f, 0.060f, 0.030f, 0, 0, 0, PINK_DARK);
+
+            // Flower dots on dress
+            part(-0.30f, -1.72f + bob, 0.54f, 0.055f, 0.055f, 0.030f, 0, 0, 0, CREAM);
+            part( 0.00f, -1.78f + bob, 0.58f, 0.050f, 0.050f, 0.028f, 0, 0, 0, CREAM);
+            part( 0.32f, -1.70f + bob, 0.53f, 0.055f, 0.055f, 0.030f, 0, 0, 0, CREAM);
         }
 
         private void eye(float x, float y, float z, float blink) {
-            part(x, y, z, 0.23f, 0.28f * blink, 0.12f, 0, 0, 0, WHITE);
-            part(x, y, z + 0.10f, 0.145f, 0.19f * blink, 0.075f, 0, 0, 0, BROWN);
-            part(x, y, z + 0.16f, 0.072f, 0.105f * blink, 0.040f, 0, 0, 0, BLACK);
+            part(x, y, z, 0.205f, 0.225f * blink, 0.100f, 0, 0, 0, WHITE);
+            part(x, y - 0.003f, z + 0.082f, 0.125f, 0.158f * blink, 0.060f, 0, 0, 0, BROWN);
+            part(x, y - 0.006f, z + 0.130f, 0.060f, 0.086f * blink, 0.032f, 0, 0, 0, BLACK);
             if (blink > 0.5f) {
-                part(x - 0.035f, y + 0.060f, z + 0.205f, 0.030f, 0.040f, 0.020f, 0, 0, 0, WHITE);
+                part(x - 0.032f, y + 0.050f, z + 0.167f, 0.028f, 0.032f, 0.016f, 0, 0, 0, WHITE);
+                part(x + 0.036f, y - 0.038f, z + 0.162f, 0.014f, 0.017f, 0.010f, 0, 0, 0, WHITE);
             }
         }
 
         private void drawShadow() {
-            part(0f, -3.04f, -0.40f, 1.35f, 0.10f, 0.82f, 0, 0, 0, SHADOW);
+            part(0f, -2.86f, -0.36f, 0.92f, 0.065f, 0.54f, 0, 0, 0, SHADOW);
         }
 
         private void part(float x, float y, float z,
@@ -270,8 +295,9 @@ public class Aafiya3DView extends GLSurfaceView {
                 " vec3 n=normalize(vNormal);\n" +
                 " vec3 l=normalize(vec3(-0.45,0.80,1.00));\n" +
                 " float d=max(dot(n,l),0.0);\n" +
-                " float rim=pow(1.0-max(n.z,0.0),2.0)*0.14;\n" +
-                " vec3 c=uColor.rgb*(0.50+0.55*d)+vec3(rim);\n" +
+                " float rim=pow(1.0-max(n.z,0.0),2.0)*0.08;\n" +
+                " float shade=0.74+0.34*d;\n" +
+                " vec3 c=uColor.rgb*shade+vec3(rim);\n" +
                 " gl_FragColor=vec4(c,uColor.a);\n" +
                 "}";
 
