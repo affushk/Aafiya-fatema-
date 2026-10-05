@@ -1,24 +1,24 @@
-# Aafiya Fatema — Premium 3D
+# Aafiya Fatema — Child Neutral 3D
 
 A child-friendly Android virtual companion game for Aafiya Fatema.
 
 ## Current build
-- Premium rigged 3D hijab character prototype
-- Neutral studio-style rendering instead of the old primitive sphere character
-- Animated idle / happy / waving / talking poses
+- Live 3D child-proportion girl character
+- Neutral premium lighting
+- Procedural pink hijab and modest dress
+- Idle, listen, talk, happy and wave reactions
 - Tap reactions
-- Offline voice recording + cute pitch repeat
+- Voice record + cute pitch repeat
 - Happiness, Food, Sleep and Clean meters
 - Food, Bath, Sleep, Dress, Talk and Play actions
 - No ads and no paid API
 
-## 3D prototype asset attribution
-The premium rigged hijab GLB animation assets used in this prototype come from the MIT-licensed repository:
-FattahPradiptaK/LPK-Healthkathon-VA
+## 3D base model
+The child-proportion avatar is reshaped at runtime from the CC0 Quaternius Standard female base character.
+Source model prepared by glanderness/BeefTV from Quaternius Universal Base Characters Standard.
+Quaternius source is CC0 1.0.
 
-3D rendering uses Google model-viewer 4.3.1 (Apache-2.0).
-
-The model is used as a quality prototype while the final Aafiya-specific baby-girl model is refined.
+The hijab/dress geometry and child-proportion deformation are created in the Aafiya Fatema app at runtime.
 
 ## APK
 GitHub Actions automatically builds the APK after each update.
