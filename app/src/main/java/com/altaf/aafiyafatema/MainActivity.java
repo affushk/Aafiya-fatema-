@@ -29,23 +29,18 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
-        if (android.os.Build.VERSION.SDK_INT >= 30) {
-            getWindow().setDecorFitsSystemWindows(false);
-            WindowInsetsController c = getWindow().getInsetsController();
-            if (c != null) {
-                c.hide(WindowInsets.Type.statusBars());
-                c.setSystemBarsBehavior(WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-            }
+        try {
+            setContentView(new GameView());
+        } catch (Throwable startupError) {
+            setContentView(new SafeView(startupError));
         }
-        setContentView(new GameView());
     }
 
     private final class GameView extends View {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Random random = new Random();
-        private final ToneGenerator tone = new ToneGenerator(AudioManager.STREAM_MUSIC, 65);
+        private ToneGenerator tone;
         private final Bitmap character;
 
         private final String[] reactions = {
@@ -300,13 +295,16 @@ public class MainActivity extends Activity {
             bubble = message;
             reactionUntil = SystemClock.uptimeMillis() + 2200;
             if (!muted) {
-                int[] tones = {
-                        ToneGenerator.TONE_PROP_BEEP, ToneGenerator.TONE_PROP_ACK,
-                        ToneGenerator.TONE_PROP_PROMPT, ToneGenerator.TONE_DTMF_6,
-                        ToneGenerator.TONE_DTMF_3, ToneGenerator.TONE_DTMF_9,
-                        ToneGenerator.TONE_PROP_BEEP2, ToneGenerator.TONE_PROP_ACK
-                };
-                tone.startTone(tones[Math.abs(toneIndex) % tones.length], 110);
+                try {
+                    if (tone == null) tone = new ToneGenerator(AudioManager.STREAM_MUSIC, 55);
+                    int[] tones = {
+                            ToneGenerator.TONE_PROP_BEEP, ToneGenerator.TONE_PROP_ACK,
+                            ToneGenerator.TONE_PROP_BEEP2, ToneGenerator.TONE_DTMF_6,
+                            ToneGenerator.TONE_DTMF_3, ToneGenerator.TONE_DTMF_9,
+                            ToneGenerator.TONE_PROP_BEEP2, ToneGenerator.TONE_PROP_ACK
+                    };
+                    tone.startTone(tones[Math.abs(toneIndex) % tones.length], 100);
+                } catch (Throwable ignored) { }
             }
             invalidate();
         }
