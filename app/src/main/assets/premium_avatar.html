@@ -100,7 +100,7 @@ box-shadow:0 8px 25px rgba(90,60,90,.08);pointer-events:none}
     });
     const floor=new THREE.Mesh(new THREE.CircleGeometry(.95,64),floorMat);
     floor.rotation.x=-Math.PI/2;
-    floor.position.y=-.012;
+    floor.position.y=-.004;
     floor.receiveShadow=true;
     scene.add(floor);
 
@@ -238,24 +238,45 @@ box-shadow:0 8px 25px rgba(90,60,90,.08);pointer-events:none}
 
   function frameCat(){
     if(!catRoot)return;
+
     const box=visibleMeshBox();
     const size=box.getSize(new THREE.Vector3());
-    const center=box.getCenter(new THREE.Vector3());
     if(!isFinite(size.y)||size.y<=.001)return;
+
+    let bottom=box.min.y;
+    let top=box.max.y;
+    let left=box.min.x;
+    let right=box.max.x;
+
+    // Skinned ears/head can extend beyond the static geometry bounds.
+    // Estimate a safe hero top from the head bone so no ears are cropped.
+    if(bones.head){
+      const hp=bones.head.getWorldPosition(new THREE.Vector3());
+      const safeHeadTop=hp.y + size.y*.36;
+      if(safeHeadTop>top)top=safeHeadTop;
+    }
+
+    const heroHeight=Math.max(.01,top-bottom);
+    const heroWidth=Math.max(.01,right-left);
+    const centerX=(left+right)*.5;
+    const centerY=(top+bottom)*.5;
 
     const vFov=THREE.MathUtils.degToRad(camera.fov);
     const hFov=2*Math.atan(Math.tan(vFov/2)*Math.max(.35,camera.aspect));
-    const distH=(size.y*.5)/Math.tan(vFov/2);
-    const distW=(size.x*.5)/Math.tan(hFov/2);
 
-    // Leave comfortable space around ears, paws and speech bubble.
-    const dist=Math.max(distH,distW)*1.52;
-    targetY=center.y-size.y*.025;
+    // Enough air around ears/paws, but keep cat visually large.
+    const distH=(heroHeight*.5)/Math.tan(vFov/2);
+    const distW=(heroWidth*.5)/Math.tan(hFov/2);
+    const dist=Math.max(distH*1.18,distW*1.28);
 
-    camera.position.set(center.x,targetY+size.y*.015,center.z+dist);
-    camera.near=Math.max(.02,dist/120);
+    // Looking slightly ABOVE the geometric center places the cat lower on screen.
+    // This uses the empty lower half of the stage instead of cropping the head.
+    targetY=centerY + heroHeight*.16;
+
+    camera.position.set(centerX,targetY+heroHeight*.015,box.getCenter(new THREE.Vector3()).z+dist);
+    camera.near=Math.max(.02,dist/140);
     camera.far=dist+25;
-    camera.lookAt(center.x,targetY,center.z);
+    camera.lookAt(centerX,targetY,box.getCenter(new THREE.Vector3()).z);
     camera.updateProjectionMatrix();
   }
 
