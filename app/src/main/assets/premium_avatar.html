@@ -5,299 +5,124 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}
-canvas{display:block;width:100%;height:100%;touch-action:none}
-#load{position:absolute;inset:auto 0 48% 0;text-align:center;font:600 13px system-ui;color:#756276;pointer-events:none}
+#stage{position:relative;width:100%;height:100%;overflow:hidden;
+background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.98),rgba(255,244,249,.84) 48%,rgba(239,233,246,.76) 100%)}
+#api-frame{width:100%;height:100%;border:0;background:transparent;transition:transform .28s ease;transform-origin:50% 58%}
+#status{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 14px;border-radius:18px;background:rgba(255,255,255,.88);font:600 13px system-ui;color:#745d72;pointer-events:none}
+#credit{position:absolute;left:10px;bottom:7px;font:500 8px system-ui;color:rgba(95,75,94,.45);pointer-events:none}
+.talk{animation:talkBob .34s ease-in-out infinite alternate}
+.wave{animation:wavePop .48s ease-in-out 4 alternate}
+.happy{animation:happyPop .42s ease-in-out 4 alternate}
+.listen{animation:listenTilt .55s ease-in-out infinite alternate}
+@keyframes talkBob{from{transform:translateY(0) scale(1)}to{transform:translateY(-5px) scale(1.012)}}
+@keyframes wavePop{from{transform:rotate(-1.2deg) scale(1)}to{transform:rotate(1.2deg) scale(1.018)}}
+@keyframes happyPop{from{transform:translateY(0) scale(1)}to{transform:translateY(-9px) scale(1.02)}}
+@keyframes listenTilt{from{transform:rotate(-.45deg)}to{transform:rotate(.45deg)}}
 </style>
+<script src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js"></script>
 </head>
 <body>
-<div id="load">Aafiya 3D loading…</div>
-<script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"}}
-</script>
-<script type="module">
-import * as THREE from 'three';
-import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+<div id="stage">
+  <iframe id="api-frame" allow="autoplay; fullscreen; xr-spatial-tracking"></iframe>
+  <div id="status">Aafiya 3D loading…</div>
+  <div id="credit">3D model: “MUSLIM GIRL” by Najeeb chokli · CC BY</div>
+</div>
+<script>
+(function(){
+  const iframe=document.getElementById('api-frame');
+  const status=document.getElementById('status');
+  const uid='d7aa25c2c2ca4adc87af16043bbe7607';
+  let api=null, anims=[], resetTimer=null;
 
-const scene=new THREE.Scene();
-const camera=new THREE.PerspectiveCamera(27,1,.05,20);
-camera.position.set(0,.75,3.6);
-camera.lookAt(0,.65,0);
+  function ready(){
+    status.style.display='none';
+    try{Android.modelReady()}catch(e){}
+  }
+  function fail(msg){
+    status.textContent='3D model load issue';
+    try{Android.modelError(String(msg||'error'))}catch(e){}
+  }
 
-const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-renderer.setSize(innerWidth,innerHeight);
-renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.12;
-renderer.shadowMap.enabled=true;
-renderer.shadowMap.type=THREE.PCFSoftShadowMap;
-document.body.appendChild(renderer.domElement);
-
-scene.add(new THREE.HemisphereLight(0xfff8f4,0x8a718d,2.0));
-const key=new THREE.DirectionalLight(0xffffff,3.1); key.position.set(-2.4,3.8,4.2); key.castShadow=true; scene.add(key);
-const fill=new THREE.DirectionalLight(0xffd8e7,1.45); fill.position.set(3,2,2.2); scene.add(fill);
-const rim=new THREE.DirectionalLight(0xb8d7ff,1.0); rim.position.set(-2,2,-3); scene.add(rim);
-
-const floor=new THREE.Mesh(new THREE.CircleGeometry(.72,64),new THREE.MeshStandardMaterial({color:0xe8dce8,transparent:true,opacity:.44,roughness:1}));
-floor.rotation.x=-Math.PI/2; floor.position.y=-.015; floor.receiveShadow=true; scene.add(floor);
-
-let actor=null, state='idle', stateUntil=0;
-const bones={}, restQuat=new Map();
-
-function fit(){
-  const w=Math.max(1,innerWidth),h=Math.max(1,innerHeight);
-  renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix();
-}
-addEventListener('resize',fit); fit();
-
-function n(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
-function findBone(root,keys){
-  let hit=null;
-  root.traverse(o=>{
-    if(hit||!o.isBone)return;
-    const z=n(o.name);
-    if(keys.some(k=>z.includes(k))) hit=o;
-  });
-  return hit;
-}
-
-function deformPoint(p){
-  const hip=.95, neck=1.56;
-  const leg=.55, torso=.62, head=1.0, shoulders=.77, waist=.83, hips=.86, arms=.66, headWidth=1.27, chest=.82, belly=.88;
-  const y=p.y;
-  let ny;
-  if(y<hip) ny=y*leg;
-  else if(y<neck) ny=hip*leg+(y-hip)*torso;
-  else ny=hip*leg+(neck-hip)*torso+(y-neck)*head;
-
-  const lerp=(a,b,t)=>a+(b-a)*Math.max(0,Math.min(1,t));
-  let width;
-  if(y<hip) width=hips;
-  else if(y<1.13) width=lerp(hips,waist,(y-hip)/.18);
-  else if(y<1.43) width=lerp(waist,shoulders,(y-1.13)/.30);
-  else width=lerp(shoulders,headWidth,(y-1.43)/.21);
-
-  const armMix=Math.max(0,Math.min(1,(Math.abs(p.x)-.28)/.17));
-  const wx=lerp(width,arms,armMix);
-
-  let depth;
-  if(y<.82) depth=hips;
-  else if(y<1.08) depth=lerp(hips,belly,(y-.82)/.26);
-  else if(y<1.30) depth=lerp(belly,chest,(y-1.08)/.22);
-  else depth=lerp(chest,headWidth,(y-1.30)/.34);
-
-  p.set(p.x*wx,ny,p.z*depth);
-  return p;
-}
-
-function reshapeChild(root){
-  root.updateMatrixWorld(true);
-  const rootWorld=root.matrixWorld.clone(), worldRoot=rootWorld.clone().invert();
-  const skinned=[], boneList=[], original=new Map();
-
-  root.traverse(o=>{
-    if(o.isBone){boneList.push(o);original.set(o,o.getWorldPosition(new THREE.Vector3()).applyMatrix4(worldRoot));}
-    if(o.isSkinnedMesh) skinned.push(o);
-  });
-
-  for(const mesh of skinned){
-    const g=mesh.geometry.clone();
-    const a=g.attributes.position;
-    const mw=mesh.matrixWorld.clone(), wm=mw.clone().invert();
-    const p=new THREE.Vector3();
-    for(let i=0;i<a.count;i++){
-      p.fromBufferAttribute(a,i).applyMatrix4(mw).applyMatrix4(worldRoot);
-      deformPoint(p).applyMatrix4(rootWorld).applyMatrix4(wm);
-      a.setXYZ(i,p.x,p.y,p.z);
+  function setVisualState(name){
+    iframe.className='';
+    if(name && name!=='idle') iframe.classList.add(name);
+    if(resetTimer){clearTimeout(resetTimer);resetTimer=null;}
+    if(name==='wave'||name==='happy'){
+      resetTimer=setTimeout(()=>setVisualState('idle'),2200);
     }
-    a.needsUpdate=true; g.computeVertexNormals(); g.computeBoundingBox(); g.computeBoundingSphere(); mesh.geometry=g;
   }
 
-  for(const b of boneList){
-    const inv=b.parent?b.parent.matrixWorld.clone().invert():new THREE.Matrix4();
-    const q=deformPoint(original.get(b).clone()).applyMatrix4(rootWorld).applyMatrix4(inv);
-    b.position.copy(q); b.updateMatrixWorld(true);
+  function playAnimationFor(name){
+    if(!api || !anims || !anims.length) return;
+    let pick=null;
+    const wanted={
+      talk:['talk','speak','idle'],
+      wave:['wave','hello','greet','idle'],
+      happy:['happy','smile','idle'],
+      listen:['listen','think','idle'],
+      idle:['idle','stand']
+    }[name]||['idle'];
+
+    for(const key of wanted){
+      pick=anims.find(a=>String(a.name||'').toLowerCase().includes(key));
+      if(pick) break;
+    }
+    if(!pick) pick=anims[0];
+    try{
+      if(api.setCurrentAnimationByUID) api.setCurrentAnimationByUID(pick.uid);
+      if(api.setCycleMode) api.setCycleMode('one');
+      if(api.play) api.play();
+    }catch(e){}
   }
-  root.updateMatrixWorld(true);
-  [...new Set(skinned.map(m=>m.skeleton))].forEach(s=>s.calculateInverses());
-}
 
-function skinMaterials(root){
-  const skin=new THREE.MeshPhysicalMaterial({color:0xe7ad8e,roughness:.58,metalness:0,clearcoat:.08,clearcoatRoughness:.65});
-  const eyeWhite=new THREE.MeshPhysicalMaterial({color:0xfffcf7,roughness:.28,clearcoat:.22});
-  const eyeDark=new THREE.MeshPhysicalMaterial({color:0x321e18,roughness:.18,clearcoat:.55});
-  const brow=new THREE.MeshStandardMaterial({color:0x4a2a20,roughness:.9});
-
-  root.traverse(o=>{
-    if(!o.isMesh)return;
-    o.castShadow=true; o.receiveShadow=true;
-    const z=n(o.name);
-    if(z.includes('eyebrow')||z.includes('brow')) o.material=brow;
-    else if(z.includes('eye')||z.includes('iris')){
-      o.material=z.includes('white')?eyeWhite:eyeDark;
-    } else o.material=skin;
-  });
-}
-
-function addHijabDress(root){
-  const pink=new THREE.MeshPhysicalMaterial({color:0xd88aa4,roughness:.72,metalness:0,clearcoat:.04});
-  const pink2=new THREE.MeshPhysicalMaterial({color:0xb96f8d,roughness:.78,metalness:0});
-  const cream=new THREE.MeshPhysicalMaterial({color:0xfff4e8,roughness:.78});
-  const group=new THREE.Group(); group.name='AafiyaClothes';
-
-  // Face-opening hijab ring
-  const ring=new THREE.Mesh(new THREE.TorusGeometry(.305,.095,32,72),pink);
-  ring.position.set(0,1.005,.205); ring.scale.set(1.03,1.13,.88); ring.castShadow=true; group.add(ring);
-
-  // Back/top scarf volume behind face
-  const hood=new THREE.Mesh(new THREE.SphereGeometry(.355,48,32),pink);
-  hood.position.set(0,1.005,-.105); hood.scale.set(1.03,1.13,.90); hood.castShadow=true; group.add(hood);
-
-  // Cover center-front of hood with a skin-toned face opening mask by letting the actual face sit forward
-  hood.renderOrder=0; ring.renderOrder=2;
-
-  // Shoulder drape
-  const drape=new THREE.Mesh(new THREE.SphereGeometry(.40,48,24),pink2);
-  drape.position.set(0,.755,-.02); drape.scale.set(1.25,.42,.72); drape.castShadow=true; group.add(drape);
-
-  // A-line dress
-  const dress=new THREE.Mesh(new THREE.CylinderGeometry(.255,.49,.72,64,1,false),pink);
-  dress.position.set(0,.39,.00); dress.castShadow=true; group.add(dress);
-  const hem=new THREE.Mesh(new THREE.TorusGeometry(.475,.032,18,64),cream);
-  hem.position.set(0,.035,0); hem.rotation.x=Math.PI/2; group.add(hem);
-
-  // Waist detail
-  const belt=new THREE.Mesh(new THREE.TorusGeometry(.285,.026,16,64),pink2);
-  belt.position.set(0,.62,0); belt.rotation.x=Math.PI/2; group.add(belt);
-
-  // Small bow
-  const bowL=new THREE.Mesh(new THREE.SphereGeometry(.075,24,16),cream); bowL.position.set(-.07,.64,.29); bowL.scale.set(1.4,.72,.55); group.add(bowL);
-  const bowR=bowL.clone(); bowR.position.x=.07; group.add(bowR);
-  const knot=new THREE.Mesh(new THREE.SphereGeometry(.035,18,12),pink2); knot.position.set(0,.64,.335); group.add(knot);
-
-  root.add(group);
-}
-
-function normalizeAndFrame(root){
-  root.scale.setScalar(1);
-  root.position.set(0,0,0);
-  root.updateMatrixWorld(true);
-
-  let box=new THREE.Box3().setFromObject(root);
-  let size=box.getSize(new THREE.Vector3());
-
-  if(!isFinite(size.y)||size.y<=0.0001) return;
-
-  const targetHeight=1.52;
-  const s=targetHeight/size.y;
-  root.scale.setScalar(s);
-  root.updateMatrixWorld(true);
-
-  box.setFromObject(root);
-  let center=box.getCenter(new THREE.Vector3());
-  root.position.x-=center.x;
-  root.position.z-=center.z;
-  root.position.y+=0.025-box.min.y;
-  root.updateMatrixWorld(true);
-
-  box.setFromObject(root);
-  size=box.getSize(new THREE.Vector3());
-  center=box.getCenter(new THREE.Vector3());
-
-  const vFov=THREE.MathUtils.degToRad(camera.fov);
-  const hFov=2*Math.atan(Math.tan(vFov/2)*Math.max(.35,camera.aspect));
-  const distH=(size.y*.5)/Math.tan(vFov/2);
-  const distW=(size.x*.5)/Math.tan(hFov/2);
-  const dist=Math.max(distH,distW)*1.20;
-
-  camera.position.set(center.x,center.y+.02,center.z+dist);
-  camera.near=Math.max(.02,dist/100);
-  camera.far=dist+20;
-  camera.lookAt(center.x,center.y-.015,center.z);
-  camera.updateProjectionMatrix();
-}
-
-function cacheBones(root){
-  const map={
-    head:['head'],
-    neck:['neck'],
-    rUpper:['upperarmr','rightupperarm','armr'],
-    rLower:['lowerarmr','forearmr','rightforearm'],
-    lUpper:['upperarml','leftupperarm','arml']
+  window.setAafiyaPose=function(name){
+    const state=['idle','wave','happy','talk','listen'].includes(name)?name:'idle';
+    setVisualState(state);
+    playAnimationFor(state);
   };
-  for(const [k,keys] of Object.entries(map)){bones[k]=findBone(root,keys);}
-  root.traverse(o=>{if(o.isBone)restQuat.set(o,o.quaternion.clone());});
-}
 
-function resetPose(){
-  for(const [b,q] of restQuat) b.quaternion.copy(q);
-}
-function addRot(b,x=0,y=0,z=0){
-  if(!b)return;
-  const q=restQuat.get(b)||b.quaternion.clone();
-  b.quaternion.copy(q).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(x,y,z)));
-}
+  try{
+    const client=new Sketchfab('1.12.1',iframe);
+    client.init(uid,{
+      autostart:1,
+      preload:1,
+      transparent:1,
+      ui_controls:0,
+      ui_infos:0,
+      ui_watermark:0,
+      ui_hint:0,
+      ui_help:0,
+      ui_settings:0,
+      ui_vr:0,
+      ui_ar:0,
+      ui_fullscreen:0,
+      ui_annotations:0,
+      success:function(viewerApi){
+        api=viewerApi;
+        api.start();
+        api.addEventListener('viewerready',function(){
+          try{
+            api.getAnimations(function(err,list){
+              if(!err && Array.isArray(list)) anims=list;
+              ready();
+            });
+          }catch(e){ready();}
+        });
+      },
+      error:function(){fail('viewer init error');}
+    });
+  }catch(e){fail(e);}
 
-const url='https://raw.githubusercontent.com/glanderness/BeefTV/main/web/public/canvas/models/quaternius-standard-female.glb';
-new GLTFLoader().load(url,g=>{
-  actor=g.scene;
-  reshapeChild(actor);
-  skinMaterials(actor);
-  addHijabDress(actor);
-  cacheBones(actor);
-  scene.add(actor);
-  normalizeAndFrame(actor);
-  document.getElementById('load').style.display='none';
-  try{Android.modelReady()}catch(e){}
-},undefined,e=>{
-  document.getElementById('load').textContent='3D model load issue';
-  try{Android.modelError(String(e))}catch(x){}
-});
+  iframe.addEventListener('load',function(){
+    iframe.contentWindow;
+  });
 
-window.setAafiyaPose=(name)=>{
-  state=['idle','wave','happy','talk','listen'].includes(name)?name:'idle';
-  stateUntil=performance.now()+((state==='wave'||state==='happy')?2300:9999999);
-};
-
-renderer.domElement.addEventListener('click',()=>{
-  window.setAafiyaPose('wave');
-  try{Android.characterTapped()}catch(e){}
-});
-
-const clock=new THREE.Clock();
-function animate(){
-  requestAnimationFrame(animate);
-  const t=performance.now()/1000;
-  if(actor){
-    if((state==='wave'||state==='happy')&&performance.now()>stateUntil) state='idle';
-    resetPose();
-    const baseY=actor.userData.baseY ?? actor.position.y;
-    actor.userData.baseY=baseY;
-    actor.position.y=baseY+Math.sin(t*2.0)*.004;
-    actor.rotation.y=Math.sin(t*.65)*.018;
-
-    if(state==='listen'){
-      addRot(bones.head,.04,0,.10*Math.sin(t*2.4));
-    }else if(state==='talk'){
-      addRot(bones.head,.035*Math.sin(t*7),.03*Math.sin(t*3),0);
-      actor.position.y+=Math.abs(Math.sin(t*7))*.004;
-    }else if(state==='wave'){
-      addRot(bones.rUpper,-.25,0,-1.10);
-      addRot(bones.rLower,0,0,-.75+.22*Math.sin(t*8));
-      addRot(bones.head,0,0,.035);
-    }else if(state==='happy'){
-      addRot(bones.lUpper,0,0,.15);
-      addRot(bones.rUpper,0,0,-.15);
-      actor.position.y+=Math.abs(Math.sin(t*5))*.010;
-      addRot(bones.head,0,.06*Math.sin(t*3),0);
-    }else{
-      addRot(bones.head,.012*Math.sin(t*1.5),.018*Math.sin(t*.8),0);
-    }
-    actor.updateMatrixWorld(true);
-  }
-  renderer.render(scene,camera);
-}
-animate();
+  document.getElementById('stage').addEventListener('click',function(){
+    setVisualState('wave');
+    playAnimationFor('wave');
+    try{Android.characterTapped()}catch(e){}
+  });
+})();
 </script>
 </body>
 </html>
