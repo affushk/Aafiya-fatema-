@@ -1,29 +1,24 @@
-# Aafiya Fatema — Smooth White Cat
+# Aafiya Fatema — V6.1 Big White Cat Polish
 
 A child-friendly Android talking-pet game.
 
-## V5.1 character reset
-- Previous blocky Quaternius cat removed
-- Smooth rounded Toon Cat character bundled directly inside the app
-- White fur remap with dark eyes and soft pink details
-- Front-facing full-body auto framing
-- Custom Three.js renderer: no Sketchfab UI, drag hint or watermark
-- Procedural head, mouth, ear and tail reactions
-- Talking mouth/head motion, listening tilt, happy bounce, eating motion and sleep pose
-- Head / tummy / paws touch reactions
-- Voice activity detection and 5 repeat-voice styles
-- Persistent Happy / Food / Sleep / Clean state
-- Stars and daily rewards
+## V6.1 highlights
+- White cat rendered about 50% larger for a stronger hero view
+- Head tap gives a cute smile, squinted eyes, head tilt, purr and heart glow
+- Right paw tap triggers a claw-scratch screen effect with scratch sound + paw motion
+- Left paw gives a high-paw reaction
+- Ear twitch, nose boop, tummy tickle, cuddle, pet/swipe and double-tap jump
+- Touch ripple and look-at-finger behavior
+- Fast repeated tapping gives a playful grumpy reaction
+- New stretch, shy and surprise idle animations
+- Play button cycles jump, scratch, stretch and shy reactions
+- Procedural meow, purr, chirp, splash, eating, boop and scratch sounds
+- Haptic feedback, smart needs, daily rewards and saved progress
+- Pink / Sky / Cream / Mint stage themes
 
-## 3D character credit
-**Toon Cat FREE** by Omabuarts Studio  
-License: CC BY 4.0  
+## Character credit
+**Toon Cat FREE** by Omabuarts Studio — CC BY 4.0.
 Original source: https://sketchfab.com/3d-models/toon-cat-free-b2bd1ee7858444bda366110a2d960386
-
-The app changes the presentation with a white-fur material remap, custom lighting,
-camera/framing, and procedural pet reactions. A copy of the model used by the project
-was obtained from the credited DevTakao/threejs-cat example, which also attributes the
-same Omabuarts Studio source.
 
 ## Build
 GitHub Actions automatically builds the Android debug APK.
