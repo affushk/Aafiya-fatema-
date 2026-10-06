@@ -14,7 +14,32 @@ padding:10px 15px;border-radius:18px;background:rgba(255,255,255,.92);
 font:600 13px system-ui,-apple-system,sans-serif;color:#715c75;
 box-shadow:0 8px 25px rgba(90,60,90,.08);pointer-events:none}
 #fx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
-#scratchLayer,#touchLayer{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+#roomDecor{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:0}
+#scratchLayer,#touchLayer{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:4}
+#accessoryLayer{position:absolute;inset:0;pointer-events:none;z-index:3}
+.roomWall{position:absolute;inset:0}
+.roomFloor{position:absolute;left:-5%;right:-5%;bottom:-4%;height:32%;transform:perspective(420px) rotateX(62deg);transform-origin:bottom;background:linear-gradient(90deg,rgba(255,255,255,.42),rgba(255,255,255,.08));border-top:2px solid rgba(255,255,255,.55)}
+.roomWindow{position:absolute;right:7%;top:14%;width:24%;height:27%;border:8px solid rgba(255,255,255,.72);border-radius:18px;background:linear-gradient(#bfe9ff,#eefaff);box-shadow:0 12px 30px rgba(64,84,120,.14)}
+.roomWindow:after{content:'';position:absolute;left:48%;top:0;bottom:0;width:4px;background:rgba(255,255,255,.75)}
+.roomTable{position:absolute;left:6%;right:6%;bottom:13%;height:15%;border-radius:24px 24px 8px 8px;background:linear-gradient(#f5c58f,#c98248);box-shadow:0 12px 30px rgba(90,50,25,.18)}
+.roomBed{position:absolute;left:8%;right:8%;bottom:7%;height:22%;border-radius:40px 40px 20px 20px;background:linear-gradient(#69d3e6,#2aa8c2);box-shadow:0 15px 36px rgba(20,80,110,.22)}
+.roomPillow{position:absolute;left:18%;right:18%;bottom:24%;height:12%;border-radius:35px;background:linear-gradient(#dcfbff,#82d9e9)}
+.roomTub{position:absolute;left:10%;right:10%;bottom:7%;height:18%;border-radius:20px 20px 65px 65px;background:linear-gradient(#fefefe,#dcecf4);border:5px solid rgba(102,177,206,.45);box-shadow:0 15px 35px rgba(40,100,120,.16)}
+.roomToy{position:absolute;width:48px;height:48px;border-radius:14px;bottom:12%;box-shadow:0 10px 18px rgba(60,60,90,.15)}
+.roomToy.one{left:8%;background:#ff6767}.roomToy.two{left:18%;bottom:9%;background:#55bff4}.roomToy.three{right:9%;background:#8c6ff5}
+.roomWardrobe{position:absolute;left:7%;right:7%;top:8%;bottom:9%;border-radius:26px;background:linear-gradient(90deg,#ffd69b 0 48%,#ffc77a 48% 52%,#ffd69b 52%);box-shadow:inset 0 0 0 8px rgba(255,255,255,.32),0 18px 40px rgba(90,60,30,.14)}
+.roomWardrobe:after{content:'';position:absolute;left:49%;top:12%;bottom:12%;width:2px;background:rgba(140,90,40,.25)}
+.accessory{position:absolute;left:50%;transform:translateX(-50%);display:none}
+.bowAcc{top:42%;width:110px;height:38px}
+.bowAcc:before,.bowAcc:after{content:'';position:absolute;top:3px;width:48px;height:30px;background:#e94f96;border-radius:50% 16px 50% 16px;box-shadow:0 5px 12px rgba(130,40,90,.18)}
+.bowAcc:before{left:2px;transform:rotate(18deg)}.bowAcc:after{right:2px;transform:scaleX(-1) rotate(18deg)}
+.bowAcc i{position:absolute;left:42px;top:7px;width:26px;height:26px;border-radius:50%;background:#ff87bb;display:block}
+.glassesAcc{top:29%;width:170px;height:54px}
+.glassesAcc:before,.glassesAcc:after{content:'';position:absolute;top:3px;width:65px;height:42px;border:8px solid #282335;border-radius:50%;background:rgba(45,40,65,.25)}
+.glassesAcc:before{left:8px}.glassesAcc:after{right:8px}
+.glassesAcc i{position:absolute;left:73px;top:22px;width:24px;height:7px;background:#282335;display:block}
+.crownAcc{top:18%;width:120px;height:65px;background:linear-gradient(#ffd65c,#e7a72e);clip-path:polygon(0 72%,12% 18%,34% 54%,50% 0,67% 54%,88% 18%,100% 72%,92% 100%,8% 100%);filter:drop-shadow(0 8px 8px rgba(126,86,20,.18))}
+
 .scratchMark{position:absolute;width:9px;height:170px;border-radius:999px;
 background:linear-gradient(to bottom,rgba(255,255,255,0),rgba(125,92,120,.72) 18%,rgba(92,65,92,.86) 48%,rgba(255,255,255,0));
 box-shadow:0 0 4px rgba(255,255,255,.85),0 0 10px rgba(120,82,120,.22);
@@ -38,10 +63,16 @@ opacity:0;animation:smileGlow .9s ease-out forwards}
 </head>
 <body>
 <div id="stage">
+  <div id="roomDecor"></div>
   <div id="status">Cute white kitty loading…</div>
   <div id="fx"></div>
   <div id="scratchLayer"></div>
   <div id="touchLayer"></div>
+  <div id="accessoryLayer">
+    <div id="bowAcc" class="accessory bowAcc"><i></i></div>
+    <div id="glassesAcc" class="accessory glassesAcc"><i></i></div>
+    <div id="crownAcc" class="accessory crownAcc"></div>
+  </div>
   <div id="credit">Toon Cat FREE · Omabuarts Studio · CC BY 4.0</div>
 </div>
 <script>
@@ -49,8 +80,10 @@ opacity:0;animation:smileGlow .9s ease-out forwards}
   const stage=document.getElementById('stage');
   const status=document.getElementById('status');
   const fx=document.getElementById('fx');
+  const roomDecor=document.getElementById('roomDecor');
   const scratchLayer=document.getElementById('scratchLayer');
   const touchLayer=document.getElementById('touchLayer');
+  const accessoryLayer=document.getElementById('accessoryLayer');
 
   let renderer,scene,camera,clock,mixer,cat,catRoot;
   let currentAction=null;
@@ -156,6 +189,48 @@ opacity:0;animation:smileGlow .9s ease-out forwards}
     setTimeout(()=>{scratchLayer.innerHTML='';},1100);
   };
 
+  window.setPetRoom=function(room){
+    const r=String(room||'home');
+    let bg='radial-gradient(circle at 50% 27%,rgba(255,252,255,.99) 0%,rgba(250,242,250,.98) 42%,rgba(242,234,248,.98) 76%,rgba(231,223,244,.99) 100%)';
+    let decor='<div class="roomFloor"></div><div class="roomWindow"></div>';
+
+    if(r==='food'){
+      bg='linear-gradient(#fff2d8 0 62%,#f1c18a 62% 100%)';
+      decor='<div class="roomWindow"></div><div class="roomTable"></div><div class="roomFloor"></div>';
+    }else if(r==='bath'){
+      bg='linear-gradient(#d8f4ff 0 58%,#b8e8f4 58% 100%)';
+      decor='<div class="roomWindow"></div><div class="roomTub"></div><div class="roomFloor"></div>';
+    }else if(r==='sleep'){
+      bg='linear-gradient(#493c76 0 58%,#312a53 58% 100%)';
+      decor='<div class="roomWindow" style="background:linear-gradient(#263252,#8a7ac5)"></div><div class="roomPillow"></div><div class="roomBed"></div><div class="roomFloor"></div>';
+    }else if(r==='play'){
+      bg='linear-gradient(#dff7ff 0 60%,#96ddd8 60% 100%)';
+      decor='<div class="roomWindow"></div><div class="roomToy one"></div><div class="roomToy two"></div><div class="roomToy three"></div><div class="roomFloor"></div>';
+    }else if(r==='style'){
+      bg='linear-gradient(#fff1d8 0 100%)';
+      decor='<div class="roomWardrobe"></div><div class="roomFloor"></div>';
+    }else if(r==='school'){
+      bg='linear-gradient(#dff5ee 0 60%,#d5b77d 60% 100%)';
+      decor='<div style="position:absolute;left:10%;right:10%;top:12%;height:34%;border:14px solid #9b6f3f;border-radius:8px;background:#2e6d4b;box-shadow:0 10px 24px rgba(60,40,20,.18)"></div><div class="roomToy one"></div><div class="roomToy two"></div><div class="roomFloor"></div>';
+    }
+
+    stage.style.background=bg;
+    roomDecor.innerHTML=decor;
+  };
+
+  window.setPetAccessory=function(index){
+    const all=[document.getElementById('bowAcc'),document.getElementById('glassesAcc'),document.getElementById('crownAcc')];
+    all.forEach(x=>{if(x)x.style.display='none'});
+    const i=Number(index)||0;
+    if(i===1 && all[0])all[0].style.display='block';
+    if(i===2 && all[1])all[1].style.display='block';
+    if(i===3 && all[2])all[2].style.display='block';
+    if(i===4){
+      if(all[0])all[0].style.display='block';
+      if(all[1])all[1].style.display='block';
+    }
+  };
+
   window.setPetTheme=function(index){
     const themes=[
       'radial-gradient(circle at 50% 27%,rgba(255,252,255,.99) 0%,rgba(250,242,250,.98) 42%,rgba(242,234,248,.98) 76%,rgba(231,223,244,.99) 100%)',
@@ -259,6 +334,7 @@ opacity:0;animation:smileGlow .9s ease-out forwards}
     scene.add(floor);
 
     resize();
+    window.setPetRoom('home');
     window.addEventListener('resize',resize);
     loadCat();
     animate();
