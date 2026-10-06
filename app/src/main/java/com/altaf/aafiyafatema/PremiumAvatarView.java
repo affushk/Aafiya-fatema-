@@ -29,6 +29,8 @@ public class PremiumAvatarView extends WebView {
     private long lastTapAt;
     private float lastTapX;
     private float lastTapY;
+    private long burstStartedAt;
+    private int burstTapCount;
     private boolean moved;
     private boolean longPressFired;
     private final Handler gestureHandler = new Handler(Looper.getMainLooper());
@@ -109,6 +111,20 @@ public class PremiumAvatarView extends WebView {
                 "window.lookAtTouch(" + x + "," + y + ")", null));
     }
 
+    public void touchAt(float nx, float ny) {
+        float x = Math.max(0f, Math.min(1f, nx));
+        float y = Math.max(0f, Math.min(1f, ny));
+        post(() -> evaluateJavascript(
+                "window.touchAt(" + x + "," + y + ")", null));
+    }
+
+    public void scratchAt(float nx, float ny) {
+        float x = Math.max(0f, Math.min(1f, nx));
+        float y = Math.max(0f, Math.min(1f, ny));
+        post(() -> evaluateJavascript(
+                "window.showScratch(" + x + "," + y + ")", null));
+    }
+
     public void setSpeaking(boolean speaking) {
         setPose(speaking ? "talk" : "idle");
         if (speaking) {
@@ -171,7 +187,10 @@ public class PremiumAvatarView extends WebView {
                 gestureHandler.removeCallbacks(longPressRunnable);
                 gestureHandler.postDelayed(longPressRunnable, 650);
                 if (getWidth() > 0 && getHeight() > 0) {
-                    lookAt(x / getWidth(), y / getHeight());
+                    float nx = x / getWidth();
+                    float ny = y / getHeight();
+                    lookAt(nx, ny);
+                    touchAt(nx, ny);
                 }
                 break;
 
@@ -209,6 +228,24 @@ public class PremiumAvatarView extends WebView {
 
                 if (elapsed < 650 && listener != null && getHeight() > 0 && getWidth() > 0) {
                     long now = System.currentTimeMillis();
+
+                    if (burstStartedAt == 0L || now - burstStartedAt > 2200) {
+                        burstStartedAt = now;
+                        burstTapCount = 1;
+                    } else {
+                        burstTapCount++;
+                    }
+
+                    if (burstTapCount >= 6) {
+                        burstTapCount = 0;
+                        burstStartedAt = now;
+                        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                        listener.onTouchZone("annoyed");
+                        react("annoyed");
+                        playPetSound("grumpy");
+                        break;
+                    }
+
                     boolean doubleTap = now - lastTapAt < 330
                             && Math.hypot(x - lastTapX, y - lastTapY) < touchSlop * 5f;
 
