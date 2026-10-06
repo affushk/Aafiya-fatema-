@@ -1,20 +1,16 @@
-# Aafiya Fatema — V7 Room Life Update
+# Aafiya Fatema — V8 Real 3D Movement
 
-A child-friendly Android talking-pet game inspired by the room-based virtual-pet experience, with its own original white-cat character and UI.
+A child-friendly Android talking-pet game with an original white cat.
 
-## V7 highlights
-- Original Home, Food, Bath, Sleep, Play, School and Wardrobe room scenes
-- Room changes happen directly from the existing action buttons
-- Food room with dining table
-- Bath room with tub
-- Sleep room with bed/pillow and night ambience
-- Play room with toys
-- School scene with chalkboard-style setting
-- Wardrobe scene with switchable accessories
-- Accessories: clean look, pink bow, glasses, golden crown, bow + glasses
-- Level progress shown next to stars
-- All V6.1 interactions retained: smile, claw scratch, cuddle, swipe petting, jump, ear/nose/belly/paw reactions
-- 50% larger cat, haptics, procedural pet sounds, smart needs and saved progress
+## V8 highlights
+- Replaced fake flat room overlays with actual Three.js 3D room geometry
+- Cat now walks left/right to room targets instead of staying fixed
+- Home cat wanders naturally when idle
+- Subtle camera follow during movement
+- Real 3D Home, Food, Bath, Sleep, Play, School and Wardrobe scenes
+- 3D furniture/props: walls, floor, windows, table, bowl, tub, bed, toys, wardrobe, school board
+- Existing V6/V7 touch system retained: smile, claw scratch, cuddle, swipe petting, double-tap jump, ear/nose/belly/paw reactions
+- Accessories, stars, levels, saved progress and voice repeat retained
 
 ## Character credit
 **Toon Cat FREE** by Omabuarts Studio — CC BY 4.0.
