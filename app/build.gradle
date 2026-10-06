@@ -10,8 +10,8 @@ android {
         applicationId 'com.altaf.aafiyafatema'
         minSdk 24
         targetSdk 35
-        versionCode 11
-        versionName '5.0-professional-white-cat'
+        versionCode 12
+        versionName '5.1-smooth-white-toon-cat'
     }
 
     buildTypes {
