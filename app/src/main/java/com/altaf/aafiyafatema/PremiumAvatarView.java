@@ -104,6 +104,16 @@ public class PremiumAvatarView extends WebView {
         post(() -> evaluateJavascript("window.setPetTheme(" + safe + ")", null));
     }
 
+    public void setRoom(String room) {
+        String safe = sanitize(room, "home");
+        post(() -> evaluateJavascript("window.setPetRoom('" + safe + "')", null));
+    }
+
+    public void setAccessory(int accessoryIndex) {
+        int safe = Math.max(0, Math.min(4, accessoryIndex));
+        post(() -> evaluateJavascript("window.setPetAccessory(" + safe + ")", null));
+    }
+
     public void lookAt(float nx, float ny) {
         float x = Math.max(0f, Math.min(1f, nx));
         float y = Math.max(0f, Math.min(1f, ny));
