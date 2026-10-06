@@ -105,6 +105,18 @@ box-shadow:0 8px 25px rgba(90,60,90,.08);pointer-events:none}
 
   window.setPetSoundEnabled=function(enabled){soundEnabled=!!enabled;};
 
+  window.setPetTheme=function(index){
+    const themes=[
+      'radial-gradient(circle at 50% 27%,rgba(255,252,255,.99) 0%,rgba(250,242,250,.98) 42%,rgba(242,234,248,.98) 76%,rgba(231,223,244,.99) 100%)',
+      'radial-gradient(circle at 50% 27%,rgba(255,255,255,.99) 0%,rgba(244,249,255,.98) 42%,rgba(228,239,251,.98) 76%,rgba(216,229,245,.99) 100%)',
+      'radial-gradient(circle at 50% 27%,rgba(255,255,251,.99) 0%,rgba(255,249,235,.98) 42%,rgba(247,237,215,.98) 76%,rgba(238,225,204,.99) 100%)',
+      'radial-gradient(circle at 50% 27%,rgba(255,255,255,.99) 0%,rgba(242,255,247,.98) 42%,rgba(226,243,233,.98) 76%,rgba(214,233,223,.99) 100%)'
+    ];
+    stage.style.background=themes[Math.max(0,Math.min(3,Number(index)||0))];
+  };
+
+
+
   window.playPetSound=function(kind){
     if(!soundEnabled)return;
     const k=String(kind||'meow');
