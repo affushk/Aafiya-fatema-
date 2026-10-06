@@ -6,18 +6,27 @@
 <style>
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}
 #stage{position:relative;width:100%;height:100%;overflow:hidden;
-background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.98),rgba(255,244,249,.84) 48%,rgba(239,233,246,.76) 100%)}
-#api-frame{width:100%;height:100%;border:0;background:transparent;transition:transform .28s ease;transform-origin:50% 58%}
-#status{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);padding:10px 14px;border-radius:18px;background:rgba(255,255,255,.88);font:600 13px system-ui;color:#745d72;pointer-events:none}
-#credit{position:absolute;left:10px;bottom:7px;font:500 8px system-ui;color:rgba(95,75,94,.45);pointer-events:none}
-.talk{animation:talkBob .34s ease-in-out infinite alternate}
-.wave{animation:wavePop .48s ease-in-out 4 alternate}
-.happy{animation:happyPop .42s ease-in-out 4 alternate}
+background:radial-gradient(circle at 50% 32%,#fff 0%,#fff5fa 48%,#eee8f8 100%)}
+#api-frame{width:100%;height:100%;border:0;background:transparent;pointer-events:none;
+transition:transform .22s ease,filter .22s ease;transform-origin:50% 58%}
+#status{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);
+padding:10px 14px;border-radius:18px;background:rgba(255,255,255,.9);
+font:600 13px system-ui;color:#745d72;pointer-events:none}
+#credit{position:absolute;left:9px;bottom:6px;font:500 7px system-ui;
+color:rgba(95,75,94,.34);pointer-events:none}
+#fx{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.fx{position:absolute;left:50%;top:52%;font-size:34px;opacity:0;animation:floatUp 1.25s ease-out forwards}
+.fx:nth-child(2){margin-left:-70px;animation-delay:.08s}.fx:nth-child(3){margin-left:70px;animation-delay:.16s}
+.talk{animation:talkBob .28s ease-in-out infinite alternate}
+.wave{animation:wavePop .42s ease-in-out 4 alternate}
+.happy{animation:happyPop .38s ease-in-out 4 alternate}
 .listen{animation:listenTilt .55s ease-in-out infinite alternate}
-@keyframes talkBob{from{transform:translateY(0) scale(1)}to{transform:translateY(-5px) scale(1.012)}}
-@keyframes wavePop{from{transform:rotate(-1.2deg) scale(1)}to{transform:rotate(1.2deg) scale(1.018)}}
-@keyframes happyPop{from{transform:translateY(0) scale(1)}to{transform:translateY(-9px) scale(1.02)}}
-@keyframes listenTilt{from{transform:rotate(-.45deg)}to{transform:rotate(.45deg)}}
+.sleep{transform:translateY(8px) scale(.985);filter:brightness(.86) saturate(.8)}
+@keyframes talkBob{from{transform:translateY(0) scale(1)}to{transform:translateY(-4px) scale(1.008)}}
+@keyframes wavePop{from{transform:rotate(-.7deg) scale(1)}to{transform:rotate(.7deg) scale(1.012)}}
+@keyframes happyPop{from{transform:translateY(0) scale(1)}to{transform:translateY(-7px) scale(1.014)}}
+@keyframes listenTilt{from{transform:rotate(-.25deg)}to{transform:rotate(.25deg)}}
+@keyframes floatUp{0%{opacity:0;transform:translate(-50%,15px) scale(.7)}25%{opacity:1}100%{opacity:0;transform:translate(-50%,-125px) scale(1.25)}}
 </style>
 <script src="https://static.sketchfab.com/api/sketchfab-viewer-1.12.1.js"></script>
 </head>
@@ -25,13 +34,15 @@ background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.98),rgba(255,244,
 <div id="stage">
   <iframe id="api-frame" allow="autoplay; fullscreen; xr-spatial-tracking"></iframe>
   <div id="status">Aafiya 3D loading…</div>
-  <div id="credit">3D model: “MUSLIM GIRL” by Najeeb chokli · CC BY</div>
+  <div id="fx"></div>
+  <div id="credit">3D base: “Hijab girl with white shirt” · zeehadie44 · CC BY</div>
 </div>
 <script>
 (function(){
   const iframe=document.getElementById('api-frame');
   const status=document.getElementById('status');
-  const uid='d7aa25c2c2ca4adc87af16043bbe7607';
+  const fx=document.getElementById('fx');
+  const uid='3bf60f77f1ed4251924ea41a3eefc183';
   let api=null, anims=[], resetTimer=null;
 
   function ready(){
@@ -39,8 +50,27 @@ background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.98),rgba(255,244,
     try{Android.modelReady()}catch(e){}
   }
   function fail(msg){
+    status.style.display='block';
     status.textContent='3D model load issue';
     try{Android.modelError(String(msg||'error'))}catch(e){}
+  }
+
+  function fixCamera(){
+    if(!api || !api.getCameraLookAt)return;
+    try{
+      api.getCameraLookAt(function(err,c){
+        if(err||!c)return;
+        const eye=(c.position||c.eye||[]).slice();
+        const target=(c.target||[]).slice();
+        if(eye.length!==3||target.length!==3)return;
+        const dx=eye[0]-target[0],dy=eye[1]-target[1],dz=eye[2]-target[2];
+        const d=Math.max(.01,Math.sqrt(dx*dx+dy*dy+dz*dz));
+        // Never allow the authored camera to sit below the character.
+        if(eye[1] < target[1]-d*.05) eye[1]=target[1]+d*.05;
+        try{api.setCameraLookAt(eye,target,0);}catch(e){}
+      });
+    }catch(e){}
+    try{if(api.setUserInteraction)api.setUserInteraction(false);}catch(e){}
   }
 
   function setVisualState(name){
@@ -48,62 +78,71 @@ background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.98),rgba(255,244,
     if(name && name!=='idle') iframe.classList.add(name);
     if(resetTimer){clearTimeout(resetTimer);resetTimer=null;}
     if(name==='wave'||name==='happy'){
-      resetTimer=setTimeout(()=>setVisualState('idle'),2200);
+      resetTimer=setTimeout(()=>setVisualState('idle'),2100);
     }
   }
 
+  function parsedAnimations(list){
+    if(!Array.isArray(list))return [];
+    return list.map(a=>{
+      if(Array.isArray(a))return {uid:a[0],name:String(a[1]||''),duration:Number(a[2]||0)};
+      return {uid:a.uid,name:String(a.name||''),duration:Number(a.duration||0)};
+    });
+  }
+
   function playAnimationFor(name){
-    if(!api || !anims || !anims.length) return;
-    let pick=null;
+    if(!api || !anims.length)return;
     const wanted={
-      talk:['talk','speak','idle'],
+      talk:['talk','speak','speech','idle'],
       wave:['wave','hello','greet','idle'],
-      happy:['happy','smile','idle'],
+      happy:['happy','smile','joy','idle'],
       listen:['listen','think','idle'],
+      sleep:['sleep','rest','idle'],
       idle:['idle','stand']
     }[name]||['idle'];
-
+    let pick=null;
     for(const key of wanted){
-      pick=anims.find(a=>String(a.name||'').toLowerCase().includes(key));
-      if(pick) break;
+      pick=anims.find(a=>a.name.toLowerCase().includes(key));
+      if(pick)break;
     }
-    if(!pick) pick=anims[0];
+    if(!pick)pick=anims[0];
     try{
-      if(api.setCurrentAnimationByUID) api.setCurrentAnimationByUID(pick.uid);
-      if(api.setCycleMode) api.setCycleMode('one');
-      if(api.play) api.play();
+      if(api.setCurrentAnimationByUID && pick.uid)api.setCurrentAnimationByUID(pick.uid);
+      if(api.setCycleMode)api.setCycleMode('loopone');
+      if(api.play)api.play();
     }catch(e){}
   }
 
   window.setAafiyaPose=function(name){
-    const state=['idle','wave','happy','talk','listen'].includes(name)?name:'idle';
+    const state=['idle','wave','happy','talk','listen','sleep'].includes(name)?name:'idle';
     setVisualState(state);
     playAnimationFor(state);
+  };
+
+  window.showAafiyaEffect=function(kind){
+    const map={heart:'💗',food:'🍓',bath:'🫧',zzz:'💤',music:'🎵',star:'✨',coin:'⭐'};
+    const icon=map[kind]||'✨';
+    fx.innerHTML='';
+    for(let i=0;i<3;i++){
+      const n=document.createElement('div');n.className='fx';n.textContent=icon;fx.appendChild(n);
+    }
+    setTimeout(()=>{fx.innerHTML=''},1450);
   };
 
   try{
     const client=new Sketchfab('1.12.1',iframe);
     client.init(uid,{
-      autostart:1,
-      preload:1,
-      transparent:1,
-      ui_controls:0,
-      ui_infos:0,
-      ui_watermark:0,
-      ui_hint:0,
-      ui_help:0,
-      ui_settings:0,
-      ui_vr:0,
-      ui_ar:0,
-      ui_fullscreen:0,
-      ui_annotations:0,
+      autostart:1,preload:1,transparent:1,
+      ui_controls:0,ui_infos:0,ui_watermark:0,ui_hint:0,ui_help:0,
+      ui_settings:0,ui_vr:0,ui_ar:0,ui_fullscreen:0,ui_annotations:0,
       success:function(viewerApi){
         api=viewerApi;
         api.start();
         api.addEventListener('viewerready',function(){
+          fixCamera();
           try{
             api.getAnimations(function(err,list){
-              if(!err && Array.isArray(list)) anims=list;
+              if(!err)anims=parsedAnimations(list);
               ready();
             });
           }catch(e){ready();}
@@ -112,16 +151,6 @@ background:radial-gradient(circle at 50% 30%,rgba(255,255,255,.98),rgba(255,244,
       error:function(){fail('viewer init error');}
     });
   }catch(e){fail(e);}
-
-  iframe.addEventListener('load',function(){
-    iframe.contentWindow;
-  });
-
-  document.getElementById('stage').addEventListener('click',function(){
-    setVisualState('wave');
-    playAnimationFor('wave');
-    try{Android.characterTapped()}catch(e){}
-  });
 })();
 </script>
 </body>
