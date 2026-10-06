@@ -39,6 +39,7 @@ box-shadow:0 8px 25px rgba(90,60,90,.08);pointer-events:none}
   let currentAction=null;
   let state='idle',stateUntil=0,ready=false;
   let baseY=0,targetY=.7;
+  const baseRootScale=new THREE.Vector3(1,1,1);
   const bones={};
   const restQ={}, restP={}, restS={};
   let blinkUntil=0,nextBlink=0;
@@ -263,6 +264,7 @@ box-shadow:0 8px 25px rgba(90,60,90,.08);pointer-events:none}
     catRoot.position.z-=center.z;
     catRoot.position.y-=box.min.y;
     baseY=catRoot.position.y;
+    baseRootScale.copy(catRoot.scale);
     catRoot.updateMatrixWorld(true);
 
     // Toon Cat faces +Z, so the camera at +Z sees the face directly.
@@ -399,7 +401,11 @@ box-shadow:0 8px 25px rgba(90,60,90,.08);pointer-events:none}
 
     if(catRoot){
       catRoot.position.y=baseY+bodyY;
-      catRoot.scale.setScalar(rootScale);
+      catRoot.scale.set(
+        baseRootScale.x*rootScale,
+        baseRootScale.y*rootScale,
+        baseRootScale.z*rootScale
+      );
     }
   }
 
