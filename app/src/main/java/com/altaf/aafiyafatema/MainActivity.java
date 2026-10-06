@@ -43,6 +43,7 @@ public class MainActivity extends Activity {
 
     private SharedPreferences prefs;
     private int happy, food, sleep, clean, stars, voicePreset, themeIndex;
+    private int playVariant = 0;
     private boolean muted = false;
     private boolean recording = false;
     private boolean speaking = false;
@@ -111,14 +112,21 @@ public class MainActivity extends Activity {
                 } else {
                     String[] lines = {
                             "Meow! Main yahan hoon",
-                            "Mere head par tap karo",
+                            "Head tap = smile 😻",
+                            "Right paw tap = scratch!",
                             "Double tap karke dekho!",
                             "Long press = cuddle 💗",
                             "Swipe karke pet karo"
                     };
                     setBubble(lines[idleIndex % lines.length]);
-                    if ((idleIndex & 1) == 0) characterView.wave();
-                    else characterView.happy();
+
+                    int v = idleIndex % 6;
+                    if (v == 0) characterView.wave();
+                    else if (v == 1) characterView.react("stretch");
+                    else if (v == 2) characterView.react("shy");
+                    else if (v == 3) characterView.happy();
+                    else if (v == 4) characterView.react("surprise");
+                    else characterView.react("smile");
                 }
                 idleIndex++;
             }
@@ -282,7 +290,7 @@ public class MainActivity extends Activity {
                 modelReady = true;
                 characterView.setSoundEnabled(!muted);
                 characterView.setTheme(themeIndex);
-                setBubble("Kitty ready! Tap, double-tap, long-press ya pet karo");
+                setBubble("Kitty ready! Head smile, paw scratch, double-tap & cuddle");
             }
 
             @Override
@@ -374,8 +382,26 @@ public class MainActivity extends Activity {
             sleep = clamp(sleep - 2);
             earnStars(2);
             updateBars();
-            setBubble("Meow! Let's play!");
-            characterView.play();
+
+            playVariant = (playVariant + 1) % 4;
+            if (playVariant == 0) {
+                setBubble("Meow! Jump!");
+                characterView.react("jump");
+                characterView.showEffect("star");
+            } else if (playVariant == 1) {
+                setBubble("Scratch attack! 🐾");
+                characterView.react("scratch");
+                characterView.showEffect("scratch");
+            } else if (playVariant == 2) {
+                setBubble("Cute stretch!");
+                characterView.react("stretch");
+                characterView.playPetSound("purr");
+            } else {
+                setBubble("Shy kitty 💗");
+                characterView.react("shy");
+                characterView.showEffect("heart");
+            }
+
             saveState();
         });
 
@@ -392,24 +418,25 @@ public class MainActivity extends Activity {
             case "ear_left":
             case "ear_right":
                 happy = clamp(happy + 2);
-                setBubble("Ear twitch! Meow!");
+                setBubble("Ear twitch! 😺");
                 characterView.react("ear");
                 characterView.playPetSound("chirp");
                 break;
 
             case "nose":
                 happy = clamp(happy + 2);
-                setBubble("Boop! 😺");
+                setBubble("Boop! Cute nose 💗");
                 characterView.react("nose");
                 characterView.playPetSound("boop");
                 break;
 
             case "head":
-                happy = clamp(happy + 4);
+                happy = clamp(happy + 5);
                 earnStars(1);
-                setBubble("Purr... head pat!");
-                characterView.react("headpat");
+                setBubble("Aww... cute smile! 😻");
+                characterView.react("smile");
                 characterView.playPetSound("purr");
+                characterView.showEffect("smile");
                 characterView.showEffect("heart");
                 break;
 
@@ -422,11 +449,18 @@ public class MainActivity extends Activity {
                 break;
 
             case "paw_left":
-            case "paw_right":
                 happy = clamp(happy + 3);
                 setBubble("High paw! 🐾");
                 characterView.react("paw");
                 characterView.playPetSound("meow");
+                break;
+
+            case "paw_right":
+                happy = clamp(happy + 4);
+                earnStars(1);
+                setBubble("Claw scratch! ✨");
+                characterView.react("scratch");
+                characterView.showEffect("scratch");
                 break;
 
             case "cuddle":
@@ -443,7 +477,7 @@ public class MainActivity extends Activity {
                 earnStars(2);
                 food = clamp(food - 1);
                 sleep = clamp(sleep - 1);
-                setBubble("Woohoo! Double tap jump!");
+                setBubble("Woohoo! Big jump!");
                 characterView.react("jump");
                 characterView.showEffect("star");
                 characterView.playPetSound("chirp");
@@ -455,6 +489,12 @@ public class MainActivity extends Activity {
                 characterView.react("pet");
                 characterView.playPetSound("purr");
                 characterView.showEffect("heart");
+                break;
+
+            case "annoyed":
+                setBubble("Hey! Itna fast nahi 😾");
+                characterView.react("annoyed");
+                characterView.playPetSound("grumpy");
                 break;
 
             default:
