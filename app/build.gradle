@@ -10,8 +10,8 @@ android {
         applicationId 'com.altaf.aafiyafatema'
         minSdk 24
         targetSdk 35
-        versionCode 8
-        versionName '3.2-auto-fit-child-3d'
+        versionCode 9
+        versionName '3.3-real-hijab-girl-3d'
     }
 
     buildTypes {
