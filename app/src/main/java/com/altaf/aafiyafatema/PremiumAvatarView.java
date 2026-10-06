@@ -86,7 +86,7 @@ public class PremiumAvatarView extends WebView {
     }
 
     public void eat() {
-        setPose("happy");
+        setPose("food");
         showEffect("food");
     }
 
