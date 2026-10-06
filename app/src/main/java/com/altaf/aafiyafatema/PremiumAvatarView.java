@@ -97,6 +97,11 @@ public class PremiumAvatarView extends WebView {
                 "window.setPetSoundEnabled(" + (enabled ? "true" : "false") + ")", null));
     }
 
+    public void setTheme(int themeIndex) {
+        int safe = Math.max(0, Math.min(3, themeIndex));
+        post(() -> evaluateJavascript("window.setPetTheme(" + safe + ")", null));
+    }
+
     public void lookAt(float nx, float ny) {
         float x = Math.max(0f, Math.min(1f, nx));
         float y = Math.max(0f, Math.min(1f, ny));
