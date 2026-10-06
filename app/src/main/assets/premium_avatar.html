@@ -925,6 +925,11 @@ opacity:0;animation:smileGlow .9s ease-out forwards}
 
       if(['happy','wave','food','sleep','headpat','smile','ear','nose','belly','paw','scratch','jump','cuddle','pet','bath','play','stretch','shy','surprise','annoyed'].includes(state) && now>stateUntil)setState('idle');
       animateBones(now,t);
+
+      // subtle camera follow so walking feels like a living 3D scene
+      const desiredCamX=catRoot.position.x*.16;
+      camera.position.x+=(desiredCamX-camera.position.x)*Math.min(1,dt*2.3);
+      camera.lookAt(catRoot.position.x*.07,targetY,catRoot.position.z-.08);
     }
     renderer.render(scene,camera);
   }
