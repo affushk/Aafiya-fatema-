@@ -1,25 +1,29 @@
-# Aafiya Fatema — Professional White Cat
+# Aafiya Fatema — Smooth White Cat
 
-A child-friendly Android talking-pet game built for Aafiya.
+A child-friendly Android talking-pet game.
 
-## V5 white-cat reset
-- Human/hijab avatars removed completely
-- Custom Three.js renderer with no Sketchfab viewer UI or watermark
-- Cute white 3D cat with soft studio lighting and full-body auto framing
-- Rigged cat animation clips for idle, eating, jumping/reactions, walking/running
+## V5.1 character reset
+- Previous blocky Quaternius cat removed
+- Smooth rounded Toon Cat character bundled directly inside the app
+- White fur remap with dark eyes and soft pink details
+- Front-facing full-body auto framing
+- Custom Three.js renderer: no Sketchfab UI, drag hint or watermark
+- Procedural head, mouth, ear and tail reactions
+- Talking mouth/head motion, listening tilt, happy bounce, eating motion and sleep pose
 - Head / tummy / paws touch reactions
-- Voice activity detection: recording stops after the child stops speaking
-- Cute, Tiny, Funny, Deep and Normal repeat voices
-- Happy / Food / Sleep / Clean persistent needs
-- Stars, daily rewards and offline state saving
-- Food, Bath, Sleep, Style, Talk and Play actions
+- Voice activity detection and 5 repeat-voice styles
+- Persistent Happy / Food / Sleep / Clean state
+- Stars and daily rewards
 
-## 3D cat source
-Base model: **Cat** by Quaternius, distributed through Poly Pizza.
-License: **CC0 1.0 Universal**.
-Source: https://poly.pizza/m/qKICY6xla2
+## 3D character credit
+**Toon Cat FREE** by Omabuarts Studio  
+License: CC BY 4.0  
+Original source: https://sketchfab.com/3d-models/toon-cat-free-b2bd1ee7858444bda366110a2d960386
 
-The app applies its own white-fur material treatment, lighting, camera, reactions and UI.
+The app changes the presentation with a white-fur material remap, custom lighting,
+camera/framing, and procedural pet reactions. A copy of the model used by the project
+was obtained from the credited DevTakao/threejs-cat example, which also attributes the
+same Omabuarts Studio source.
 
 ## Build
-GitHub Actions builds the Android debug APK after every update.
+GitHub Actions automatically builds the Android debug APK.
