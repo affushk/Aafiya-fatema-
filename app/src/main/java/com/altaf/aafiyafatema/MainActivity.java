@@ -2,6 +2,7 @@ package com.altaf.aafiyafatema;
 
 import android.Manifest;
 import android.app.Activity;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -27,32 +28,153 @@ import java.io.File;
 
 public class MainActivity extends Activity {
     private static final int MIC_PERMISSION_REQUEST = 77;
+    private static final String PREFS = "aafiya_pet_state";
+
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final String[] voiceNames = {"Cute", "Tiny", "Funny", "Deep", "Normal"};
+    private final float[] voicePitch = {1.34f, 1.55f, 1.16f, 0.88f, 1.00f};
+    private final float[] voiceSpeed = {1.03f, 1.08f, 1.16f, 0.95f, 1.00f};
 
     private PremiumAvatarView characterView;
-    private TextView bubble;
+    private TextView bubble, starText;
     private ProgressBar happyBar, foodBar, sleepBar, cleanBar;
+    private Button voiceButton;
 
-    private int happy = 82, food = 68, sleep = 74, clean = 86;
+    private SharedPreferences prefs;
+    private int happy, food, sleep, clean, stars, voicePreset;
     private boolean muted = false;
     private boolean recording = false;
     private boolean speaking = false;
+    private boolean modelReady = false;
+    private boolean speechDetected = false;
+    private long recordStartedAt = 0L;
+    private long lastLoudAt = 0L;
+    private int idleIndex = 0;
 
     private MediaRecorder recorder;
     private MediaPlayer player;
-    private final Handler handler = new Handler(Looper.getMainLooper());
+
+    private final Runnable voiceMonitor = new Runnable() {
+        @Override
+        public void run() {
+            if (!recording || recorder == null) return;
+            long now = System.currentTimeMillis();
+            long elapsed = now - recordStartedAt;
+            int amp = 0;
+            try { amp = recorder.getMaxAmplitude(); } catch (Throwable ignored) { }
+
+            if (amp > 1600) {
+                speechDetected = true;
+                lastLoudAt = now;
+            }
+
+            if (speechDetected && elapsed > 900 && now - lastLoudAt > 850) {
+                stopAndReplay();
+                return;
+            }
+
+            if (!speechDetected && elapsed > 4300) {
+                stopRecordingOnly();
+                setBubble("Mujhe awaaz nahi sunai di - phir bolo");
+                if (characterView != null) characterView.setListening(false);
+                return;
+            }
+
+            if (elapsed > 7200) {
+                stopAndReplay();
+                return;
+            }
+
+            handler.postDelayed(this, 120);
+        }
+    };
+
+    private final Runnable idleReaction = new Runnable() {
+        @Override
+        public void run() {
+            if (modelReady && !recording && !speaking && characterView != null) {
+                String[] lines = {
+                        "Aafiya yahan hai!",
+                        "Mere head par tap karo",
+                        "Hee hee... play karein?",
+                        "Assalamualaikum!"
+                };
+                setBubble(lines[idleIndex % lines.length]);
+                if ((idleIndex & 1) == 0) characterView.wave();
+                else characterView.happy();
+                idleIndex++;
+            }
+            handler.postDelayed(this, 8500);
+        }
+    };
+
+    private final Runnable gameTick = new Runnable() {
+        @Override
+        public void run() {
+            if (!recording && !speaking) {
+                food = clamp(food - 1);
+                if ((idleIndex % 2) == 0) sleep = clamp(sleep - 1);
+                if ((idleIndex % 3) == 0) clean = clamp(clean - 1);
+                if (food < 25 || sleep < 20 || clean < 20) happy = clamp(happy - 1);
+                updateBars();
+                saveState();
+            }
+            handler.postDelayed(this, 90000);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
+        loadStateWithOfflineDecay();
+
         getWindow().setStatusBarColor(Color.rgb(255, 240, 249));
         getWindow().setNavigationBarColor(Color.rgb(255, 245, 251));
         buildUi();
+
+        giveDailyRewardIfNeeded();
+        handler.postDelayed(idleReaction, 7000);
+        handler.postDelayed(gameTick, 90000);
+    }
+
+    private void loadStateWithOfflineDecay() {
+        happy = prefs.getInt("happy", 82);
+        food = prefs.getInt("food", 72);
+        sleep = prefs.getInt("sleep", 76);
+        clean = prefs.getInt("clean", 88);
+        stars = prefs.getInt("stars", 25);
+        voicePreset = prefs.getInt("voice_preset", 0);
+        if (voicePreset < 0 || voicePreset >= voiceNames.length) voicePreset = 0;
+
+        long now = System.currentTimeMillis();
+        long last = prefs.getLong("last_seen", now);
+        long hours = Math.min(18, Math.max(0, (now - last) / 3600000L));
+        if (hours > 0) {
+            food = clamp(food - (int) hours * 2);
+            sleep = clamp(sleep - (int) hours);
+            clean = clamp(clean - (int) hours);
+            happy = clamp(happy - (int) (hours / 2));
+        }
+    }
+
+    private void giveDailyRewardIfNeeded() {
+        long today = System.currentTimeMillis() / 86400000L;
+        long lastDay = prefs.getLong("daily_reward_day", -1L);
+        if (today != lastDay) {
+            stars += 20;
+            prefs.edit().putLong("daily_reward_day", today).apply();
+            updateStars();
+            setBubble("Daily gift: +20 stars!");
+            if (characterView != null) characterView.showEffect("star");
+            saveState();
+        }
     }
 
     private void buildUi() {
         LinearLayout root = new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(14), dp(8), dp(14), dp(12));
+        root.setPadding(dp(12), dp(6), dp(12), dp(10));
         root.setBackground(makeGradient(Color.rgb(255, 241, 249), Color.rgb(239, 232, 255)));
 
         LinearLayout header = new LinearLayout(this);
@@ -62,25 +184,25 @@ public class MainActivity extends Activity {
         TextView title = new TextView(this);
         title.setText("Aafiya Fatema");
         title.setTextColor(Color.rgb(90, 55, 101));
-        title.setTextSize(28);
+        title.setTextSize(27);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         title.setGravity(Gravity.CENTER);
-        header.addView(title, new LinearLayout.LayoutParams(0, dp(54), 1f));
+        header.addView(title, new LinearLayout.LayoutParams(0, dp(52), 1f));
 
         Button sound = roundedButton("SND", Color.WHITE, Color.rgb(96, 71, 106));
-        sound.setTextSize(13);
+        sound.setTextSize(12);
         sound.setOnClickListener(v -> {
             muted = !muted;
             sound.setText(muted ? "OFF" : "SND");
             setBubble(muted ? "Sound off" : "Sound on");
         });
-        header.addView(sound, new LinearLayout.LayoutParams(dp(58), dp(48)));
+        header.addView(sound, new LinearLayout.LayoutParams(dp(58), dp(46)));
         root.addView(header);
 
         LinearLayout stats = new LinearLayout(this);
         stats.setOrientation(LinearLayout.HORIZONTAL);
         stats.setGravity(Gravity.CENTER);
-        stats.setPadding(0, dp(4), 0, dp(6));
+        stats.setPadding(0, dp(3), 0, dp(5));
 
         LinearLayout s1 = statCard("Happy", happy, Color.rgb(235, 101, 159));
         LinearLayout s2 = statCard("Food", food, Color.rgb(245, 169, 66));
@@ -91,36 +213,59 @@ public class MainActivity extends Activity {
         sleepBar = (ProgressBar) s3.getChildAt(1);
         cleanBar = (ProgressBar) s4.getChildAt(1);
 
-        stats.addView(s1, new LinearLayout.LayoutParams(0, dp(64), 1f));
-        stats.addView(space(dp(5)));
-        stats.addView(s2, new LinearLayout.LayoutParams(0, dp(64), 1f));
-        stats.addView(space(dp(5)));
-        stats.addView(s3, new LinearLayout.LayoutParams(0, dp(64), 1f));
-        stats.addView(space(dp(5)));
-        stats.addView(s4, new LinearLayout.LayoutParams(0, dp(64), 1f));
+        stats.addView(s1, new LinearLayout.LayoutParams(0, dp(60), 1f));
+        stats.addView(space(dp(4)));
+        stats.addView(s2, new LinearLayout.LayoutParams(0, dp(60), 1f));
+        stats.addView(space(dp(4)));
+        stats.addView(s3, new LinearLayout.LayoutParams(0, dp(60), 1f));
+        stats.addView(space(dp(4)));
+        stats.addView(s4, new LinearLayout.LayoutParams(0, dp(60), 1f));
         root.addView(stats);
 
+        LinearLayout info = new LinearLayout(this);
+        info.setGravity(Gravity.CENTER_VERTICAL);
+        info.setPadding(dp(3), 0, dp(3), dp(5));
+
+        starText = new TextView(this);
+        starText.setTextSize(14);
+        starText.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        starText.setTextColor(Color.rgb(111, 78, 112));
+        starText.setGravity(Gravity.CENTER_VERTICAL);
+        updateStars();
+        info.addView(starText, new LinearLayout.LayoutParams(0, dp(34), 1f));
+
+        voiceButton = roundedButton("Voice: " + voiceNames[voicePreset],
+                Color.argb(235, 255, 255, 255), Color.rgb(103, 72, 112));
+        voiceButton.setTextSize(12);
+        voiceButton.setOnClickListener(v -> cycleVoiceFilter());
+        info.addView(voiceButton, new LinearLayout.LayoutParams(dp(118), dp(34)));
+        root.addView(info);
+
         FrameLayout stage = new FrameLayout(this);
-        stage.setBackground(roundRect(Color.argb(105, 255, 255, 255), dp(28)));
+        stage.setBackground(roundRect(Color.argb(100, 255, 255, 255), dp(26)));
 
         characterView = new PremiumAvatarView(this);
         characterView.setListener(new PremiumAvatarView.Listener() {
             @Override
             public void onCharacterTap() {
-                happy = Math.min(100, happy + 2);
-                happyBar.setProgress(happy);
-                setBubble("Aafiya is happy!");
-                characterView.wave();
+                // Web viewer tap fallback. Native touch zones handle the detailed reaction.
+            }
+
+            @Override
+            public void onTouchZone(String zone) {
+                reactToTouch(zone);
             }
 
             @Override
             public void onModelReady() {
-                setBubble("Tap Aafiya - live 3D");
+                modelReady = true;
+                setBubble("Tap head, tummy ya feet!");
             }
 
             @Override
             public void onModelError(String message) {
-                setBubble("Premium 3D ke liye internet on rakho");
+                modelReady = false;
+                setBubble("3D load issue - internet check karo");
             }
         });
         stage.addView(characterView, new FrameLayout.LayoutParams(
@@ -128,29 +273,29 @@ public class MainActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT));
 
         bubble = new TextView(this);
-        bubble.setText("Premium 3D Aafiya Fatema loading...");
-        bubble.setTextSize(17);
+        bubble.setText("Aafiya Fatema loading...");
+        bubble.setTextSize(15);
         bubble.setTextColor(Color.rgb(101, 66, 111));
         bubble.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         bubble.setGravity(Gravity.CENTER);
-        bubble.setPadding(dp(16), dp(9), dp(16), dp(9));
-        bubble.setBackground(roundRect(Color.argb(240, 255, 255, 255), dp(22)));
+        bubble.setPadding(dp(14), dp(7), dp(14), dp(7));
+        bubble.setBackground(roundRect(Color.argb(238, 255, 255, 255), dp(20)));
         FrameLayout.LayoutParams bubbleLp = new FrameLayout.LayoutParams(
-                FrameLayout.LayoutParams.WRAP_CONTENT, dp(50));
+                FrameLayout.LayoutParams.WRAP_CONTENT, dp(44));
         bubbleLp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-        bubbleLp.bottomMargin = dp(12);
+        bubbleLp.bottomMargin = dp(9);
         stage.addView(bubble, bubbleLp);
 
         TextView live = new TextView(this);
-        live.setText("PREMIUM 3D");
-        live.setTextSize(11);
+        live.setText("LIVE 3D");
+        live.setTextSize(10);
         live.setTextColor(Color.WHITE);
         live.setGravity(Gravity.CENTER);
         live.setBackground(roundRect(Color.rgb(222, 77, 142), dp(12)));
-        FrameLayout.LayoutParams liveLp = new FrameLayout.LayoutParams(dp(92), dp(28));
+        FrameLayout.LayoutParams liveLp = new FrameLayout.LayoutParams(dp(70), dp(26));
         liveLp.gravity = Gravity.TOP | Gravity.END;
-        liveLp.topMargin = dp(8);
-        liveLp.rightMargin = dp(8);
+        liveLp.topMargin = dp(7);
+        liveLp.rightMargin = dp(7);
         stage.addView(live, liveLp);
 
         root.addView(stage, new LinearLayout.LayoutParams(
@@ -159,139 +304,93 @@ public class MainActivity extends Activity {
         GridLayout actions = new GridLayout(this);
         actions.setColumnCount(3);
         actions.setRowCount(2);
-        actions.setPadding(0, dp(10), 0, 0);
+        actions.setPadding(0, dp(8), 0, 0);
 
         addAction(actions, "Food", Color.rgb(255, 188, 88), () -> {
-            food = Math.min(100, food + 12);
-            happy = Math.min(100, happy + 3);
+            food = clamp(food + 16);
+            happy = clamp(happy + 3);
+            earnStars(1);
             updateBars();
-            setBubble("Yummy! Thank you!");
-            characterView.happy();
+            setBubble("Yummy! Aur khilao");
+            characterView.eat();
+            saveState();
         });
 
         addAction(actions, "Bath", Color.rgb(83, 190, 219), () -> {
-            clean = Math.min(100, clean + 14);
-            happy = Math.min(100, happy + 2);
+            clean = clamp(clean + 18);
+            happy = clamp(happy + 2);
+            earnStars(1);
             updateBars();
             setBubble("Splish splash!");
-            characterView.happy();
+            characterView.bath();
+            saveState();
         });
 
         addAction(actions, "Sleep", Color.rgb(142, 111, 226), () -> {
-            sleep = Math.min(100, sleep + 14);
+            sleep = clamp(sleep + 18);
+            happy = clamp(happy + 1);
             updateBars();
             setBubble("Good night... zzz");
+            characterView.sleep();
+            saveState();
         });
 
         addAction(actions, "Dress", Color.rgb(232, 100, 157), () -> {
-            setBubble("3D dress room comes next");
-            characterView.wave();
+            earnStars(1);
+            setBubble("Wardrobe next: pink, lavender, cream");
+            characterView.showEffect("star");
         });
 
         addAction(actions, "Talk", Color.rgb(94, 196, 152), this::requestMicOrStart);
 
         addAction(actions, "Play", Color.rgb(244, 126, 105), () -> {
-            happy = Math.min(100, happy + 9);
-            food = Math.max(0, food - 2);
-            sleep = Math.max(0, sleep - 3);
+            happy = clamp(happy + 12);
+            food = clamp(food - 2);
+            sleep = clamp(sleep - 2);
+            earnStars(2);
             updateBars();
-            setBubble("Let's play!");
+            setBubble("Hee hee! Let's play!");
             characterView.happy();
+            saveState();
         });
 
         root.addView(actions, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(176)));
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(166)));
 
         setContentView(root);
     }
 
-    private LinearLayout statCard(String label, int value, int color) {
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setGravity(Gravity.CENTER);
-        box.setPadding(dp(8), dp(5), dp(8), dp(5));
-        box.setBackground(roundRect(Color.argb(228, 255, 255, 255), dp(18)));
-
-        TextView t = new TextView(this);
-        t.setText(label);
-        t.setTextSize(12);
-        t.setTextColor(Color.rgb(86, 73, 95));
-        t.setGravity(Gravity.CENTER);
-        box.addView(t, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(25)));
-
-        ProgressBar p = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
-        p.setMax(100);
-        p.setProgress(value);
-        p.setProgressTintList(ColorStateList.valueOf(color));
-        p.setProgressBackgroundTintList(ColorStateList.valueOf(Color.rgb(235, 229, 239)));
-        box.addView(p, new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, dp(15)));
-        return box;
+    private void reactToTouch(String zone) {
+        if (recording || speaking || characterView == null) return;
+        if ("head".equals(zone)) {
+            happy = clamp(happy + 3);
+            earnStars(1);
+            setBubble("Aww... head pat!");
+            characterView.happy();
+        } else if ("belly".equals(zone)) {
+            happy = clamp(happy + 4);
+            setBubble("Hee hee! Tickles!");
+            characterView.showEffect("heart");
+            characterView.wave();
+        } else {
+            happy = clamp(happy + 2);
+            setBubble("Feet tickle! Hee hee!");
+            characterView.wave();
+        }
+        updateBars();
+        saveState();
     }
 
-    private void addAction(GridLayout grid, String label, int color, Runnable action) {
-        Button b = roundedButton(label, color, Color.WHITE);
-        b.setTextSize(19);
-        b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
-        b.setOnClickListener(v -> action.run());
-
-        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
-        lp.width = 0;
-        lp.height = dp(76);
-        lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
-        lp.setMargins(dp(4), dp(4), dp(4), dp(4));
-        grid.addView(b, lp);
-    }
-
-    private Button roundedButton(String text, int bg, int fg) {
-        Button b = new Button(this);
-        b.setText(text);
-        b.setTextColor(fg);
-        b.setAllCaps(false);
-        b.setBackground(roundRect(bg, dp(22)));
-        b.setPadding(dp(4), 0, dp(4), 0);
-        return b;
-    }
-
-    private View space(int width) {
-        View v = new View(this);
-        v.setLayoutParams(new LinearLayout.LayoutParams(width, 1));
-        return v;
-    }
-
-    private GradientDrawable roundRect(int color, float radius) {
-        GradientDrawable d = new GradientDrawable();
-        d.setColor(color);
-        d.setCornerRadius(radius);
-        return d;
-    }
-
-    private GradientDrawable makeGradient(int top, int bottom) {
-        GradientDrawable d = new GradientDrawable(
-                GradientDrawable.Orientation.TOP_BOTTOM,
-                new int[]{top, bottom});
-        return d;
-    }
-
-    private int dp(int v) {
-        return Math.round(v * getResources().getDisplayMetrics().density);
-    }
-
-    private void setBubble(String message) {
-        if (bubble != null) bubble.setText(message);
-    }
-
-    private void updateBars() {
-        happyBar.setProgress(happy);
-        foodBar.setProgress(food);
-        sleepBar.setProgress(sleep);
-        cleanBar.setProgress(clean);
+    private void cycleVoiceFilter() {
+        voicePreset = (voicePreset + 1) % voiceNames.length;
+        voiceButton.setText("Voice: " + voiceNames[voicePreset]);
+        setBubble(voiceNames[voicePreset] + " voice selected");
+        prefs.edit().putInt("voice_preset", voicePreset).apply();
     }
 
     private void requestMicOrStart() {
         if (recording || speaking) {
-            setBubble("Wait... Aafiya is talking");
+            setBubble(recording ? "Main sun rahi hoon..." : "Wait... Aafiya bol rahi hai");
             return;
         }
         if (android.os.Build.VERSION.SDK_INT < 23 ||
@@ -310,7 +409,7 @@ public class MainActivity extends Activity {
                     grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 startVoiceRepeat();
             } else {
-                setBubble("Microphone permission needed for Talk");
+                setBubble("Talk ke liye microphone permission chahiye");
             }
         }
     }
@@ -330,25 +429,39 @@ public class MainActivity extends Activity {
             recorder.start();
 
             recording = true;
+            speechDetected = false;
+            recordStartedAt = System.currentTimeMillis();
+            lastLoudAt = recordStartedAt;
             characterView.setListening(true);
-            setBubble("I'm listening... bolo Aafiya!");
-            handler.postDelayed(this::stopAndReplay, 3500);
+            setBubble("Bolo... main sun rahi hoon");
+            handler.postDelayed(voiceMonitor, 120);
         } catch (Throwable e) {
             cleanupAudio();
-            setBubble("Microphone couldn't start");
+            setBubble("Microphone start nahi hua");
         }
+    }
+
+    private void stopRecordingOnly() {
+        handler.removeCallbacks(voiceMonitor);
+        if (!recording) return;
+        recording = false;
+        try { if (recorder != null) recorder.stop(); } catch (Throwable ignored) { }
+        try { if (recorder != null) recorder.release(); } catch (Throwable ignored) { }
+        recorder = null;
     }
 
     private void stopAndReplay() {
         if (!recording) return;
-        try { recorder.stop(); } catch (Throwable ignored) { }
-        try { recorder.release(); } catch (Throwable ignored) { }
-        recorder = null;
-        recording = false;
+        stopRecordingOnly();
         characterView.setListening(false);
 
+        if (!speechDetected) {
+            setBubble("Phir se bolo - mujhe awaaz nahi mili");
+            return;
+        }
+
         if (muted) {
-            setBubble("Sound OFF hai - pehle SND on karo");
+            setBubble("Sound OFF hai - SND on karo");
             return;
         }
 
@@ -358,17 +471,19 @@ public class MainActivity extends Activity {
             player.setAudioStreamType(AudioManager.STREAM_MUSIC);
             player.setDataSource(voiceFile.getAbsolutePath());
             player.prepare();
+
             try {
                 PlaybackParams pp = new PlaybackParams();
-                pp.setPitch(1.35f);
-                pp.setSpeed(1.04f);
+                pp.setPitch(voicePitch[voicePreset]);
+                pp.setSpeed(voiceSpeed[voicePreset]);
                 player.setPlaybackParams(pp);
             } catch (Throwable ignored) { }
 
             speaking = true;
             characterView.setSpeaking(true);
-            setBubble("Aafiya Fatema says...");
-            happy = Math.min(100, happy + 5);
+            setBubble("Aafiya: " + voiceNames[voicePreset] + " voice");
+            happy = clamp(happy + 5);
+            earnStars(2);
             updateBars();
 
             player.setOnCompletionListener(mp -> {
@@ -378,13 +493,14 @@ public class MainActivity extends Activity {
                 player = null;
                 setBubble("Hee hee! Phir se bolo!");
                 characterView.wave();
+                saveState();
             });
             player.setOnErrorListener((mp, what, extra) -> {
                 speaking = false;
                 characterView.setSpeaking(false);
                 try { mp.release(); } catch (Throwable ignored) { }
                 player = null;
-                setBubble("Phir se try karo");
+                setBubble("Voice repeat error - phir try karo");
                 return true;
             });
             player.start();
@@ -396,17 +512,128 @@ public class MainActivity extends Activity {
         }
     }
 
+    private LinearLayout statCard(String label, int value, int color) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER);
+        box.setPadding(dp(7), dp(4), dp(7), dp(4));
+        box.setBackground(roundRect(Color.argb(230, 255, 255, 255), dp(17)));
+
+        TextView t = new TextView(this);
+        t.setText(label);
+        t.setTextSize(11);
+        t.setTextColor(Color.rgb(86, 73, 95));
+        t.setGravity(Gravity.CENTER);
+        box.addView(t, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(23)));
+
+        ProgressBar p = new ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal);
+        p.setMax(100);
+        p.setProgress(value);
+        p.setProgressTintList(ColorStateList.valueOf(color));
+        p.setProgressBackgroundTintList(ColorStateList.valueOf(Color.rgb(235, 229, 239)));
+        box.addView(p, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, dp(14)));
+        return box;
+    }
+
+    private void addAction(GridLayout grid, String label, int color, Runnable action) {
+        Button b = roundedButton(label, color, Color.WHITE);
+        b.setTextSize(18);
+        b.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
+        b.setOnClickListener(v -> action.run());
+
+        GridLayout.LayoutParams lp = new GridLayout.LayoutParams();
+        lp.width = 0;
+        lp.height = dp(72);
+        lp.columnSpec = GridLayout.spec(GridLayout.UNDEFINED, 1f);
+        lp.setMargins(dp(4), dp(4), dp(4), dp(4));
+        grid.addView(b, lp);
+    }
+
+    private Button roundedButton(String text, int bg, int fg) {
+        Button b = new Button(this);
+        b.setText(text);
+        b.setTextColor(fg);
+        b.setAllCaps(false);
+        b.setBackground(roundRect(bg, dp(21)));
+        b.setPadding(dp(4), 0, dp(4), 0);
+        return b;
+    }
+
+    private View space(int width) {
+        View v = new View(this);
+        v.setLayoutParams(new LinearLayout.LayoutParams(width, 1));
+        return v;
+    }
+
+    private GradientDrawable roundRect(int color, float radius) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color);
+        d.setCornerRadius(radius);
+        return d;
+    }
+
+    private GradientDrawable makeGradient(int top, int bottom) {
+        return new GradientDrawable(
+                GradientDrawable.Orientation.TOP_BOTTOM,
+                new int[]{top, bottom});
+    }
+
+    private int dp(int v) {
+        return Math.round(v * getResources().getDisplayMetrics().density);
+    }
+
+    private int clamp(int v) {
+        return Math.max(0, Math.min(100, v));
+    }
+
+    private void earnStars(int amount) {
+        stars += Math.max(0, amount);
+        updateStars();
+        if (characterView != null && amount >= 2) characterView.showEffect("coin");
+    }
+
+    private void updateStars() {
+        if (starText != null) starText.setText("⭐ " + stars + "   Daily rewards ON");
+    }
+
+    private void setBubble(String message) {
+        if (bubble != null) bubble.setText(message);
+    }
+
+    private void updateBars() {
+        if (happyBar != null) happyBar.setProgress(happy);
+        if (foodBar != null) foodBar.setProgress(food);
+        if (sleepBar != null) sleepBar.setProgress(sleep);
+        if (cleanBar != null) cleanBar.setProgress(clean);
+    }
+
+    private void saveState() {
+        if (prefs == null) return;
+        prefs.edit()
+                .putInt("happy", happy)
+                .putInt("food", food)
+                .putInt("sleep", sleep)
+                .putInt("clean", clean)
+                .putInt("stars", stars)
+                .putInt("voice_preset", voicePreset)
+                .putLong("last_seen", System.currentTimeMillis())
+                .apply();
+    }
+
     private void cleanupAudio() {
-        handler.removeCallbacksAndMessages(null);
-        recording = false;
-        speaking = false;
-        if (characterView != null) {
-            characterView.setListening(false);
-            characterView.setSpeaking(false);
+        handler.removeCallbacks(voiceMonitor);
+        speechDetected = false;
+
+        if (recording) {
+            recording = false;
+            try { if (recorder != null) recorder.stop(); } catch (Throwable ignored) { }
         }
-        try { if (recorder != null) recorder.stop(); } catch (Throwable ignored) { }
         try { if (recorder != null) recorder.release(); } catch (Throwable ignored) { }
         recorder = null;
+
+        speaking = false;
         try {
             if (player != null) {
                 player.stop();
@@ -414,12 +641,20 @@ public class MainActivity extends Activity {
             }
         } catch (Throwable ignored) { }
         player = null;
+
+        if (characterView != null) {
+            characterView.setListening(false);
+            characterView.setSpeaking(false);
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        saveState();
         cleanupAudio();
+        handler.removeCallbacks(idleReaction);
+        handler.removeCallbacks(gameTick);
         if (characterView != null) characterView.onPause();
     }
 
@@ -427,11 +662,17 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         if (characterView != null) characterView.onResume();
+        handler.removeCallbacks(idleReaction);
+        handler.removeCallbacks(gameTick);
+        handler.postDelayed(idleReaction, 7000);
+        handler.postDelayed(gameTick, 90000);
     }
 
     @Override
     protected void onDestroy() {
+        saveState();
         cleanupAudio();
+        handler.removeCallbacksAndMessages(null);
         if (characterView != null) characterView.cleanup();
         super.onDestroy();
     }
