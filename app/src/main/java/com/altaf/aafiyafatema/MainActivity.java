@@ -42,8 +42,9 @@ public class MainActivity extends Activity {
     private Button voiceButton;
 
     private SharedPreferences prefs;
-    private int happy, food, sleep, clean, stars, voicePreset, themeIndex;
+    private int happy, food, sleep, clean, stars, voicePreset, themeIndex, accessoryIndex;
     private int playVariant = 0;
+    private String currentRoom = "home";
     private boolean muted = false;
     private boolean recording = false;
     private boolean speaking = false;
@@ -172,8 +173,10 @@ public class MainActivity extends Activity {
         stars = prefs.getInt("stars", 25);
         voicePreset = prefs.getInt("voice_preset", 0);
         themeIndex = prefs.getInt("theme_index", 0);
+        accessoryIndex = prefs.getInt("accessory_index", 0);
         if (voicePreset < 0 || voicePreset >= voiceNames.length) voicePreset = 0;
         if (themeIndex < 0 || themeIndex >= themeNames.length) themeIndex = 0;
+        if (accessoryIndex < 0 || accessoryIndex > 4) accessoryIndex = 0;
 
         long now = System.currentTimeMillis();
         long last = prefs.getLong("last_seen", now);
@@ -290,7 +293,10 @@ public class MainActivity extends Activity {
                 modelReady = true;
                 characterView.setSoundEnabled(!muted);
                 characterView.setTheme(themeIndex);
-                setBubble("Kitty ready! Head smile, paw scratch, double-tap & cuddle");
+                characterView.setRoom("home");
+                characterView.setAccessory(accessoryIndex);
+                currentRoom = "home";
+                setBubble("Home ready! Food, Bath, Sleep, Style aur Play rooms try karo");
             }
 
             @Override
@@ -338,6 +344,8 @@ public class MainActivity extends Activity {
         actions.setPadding(0, dp(8), 0, 0);
 
         addAction(actions, "Food", Color.rgb(255, 188, 88), () -> {
+            currentRoom = "food";
+            characterView.setRoom(currentRoom);
             food = clamp(food + 16);
             happy = clamp(happy + 3);
             earnStars(1);
@@ -348,6 +356,8 @@ public class MainActivity extends Activity {
         });
 
         addAction(actions, "Bath", Color.rgb(83, 190, 219), () -> {
+            currentRoom = "bath";
+            characterView.setRoom(currentRoom);
             clean = clamp(clean + 18);
             happy = clamp(happy + 2);
             earnStars(1);
@@ -358,6 +368,8 @@ public class MainActivity extends Activity {
         });
 
         addAction(actions, "Sleep", Color.rgb(142, 111, 226), () -> {
+            currentRoom = "sleep";
+            characterView.setRoom(currentRoom);
             sleep = clamp(sleep + 18);
             happy = clamp(happy + 1);
             updateBars();
@@ -367,14 +379,21 @@ public class MainActivity extends Activity {
         });
 
         addAction(actions, "Style", Color.rgb(232, 100, 157), () -> {
-            themeIndex = (themeIndex + 1) % themeNames.length;
-            characterView.setTheme(themeIndex);
+            currentRoom = "style";
+            characterView.setRoom(currentRoom);
+            accessoryIndex = (accessoryIndex + 1) % 5;
+            characterView.setAccessory(accessoryIndex);
             characterView.showEffect("star");
-            setBubble("Style: " + themeNames[themeIndex]);
-            prefs.edit().putInt("theme_index", themeIndex).apply();
+            String[] names = {"Clean look", "Pink bow", "Cool glasses", "Golden crown", "Bow + glasses"};
+            setBubble("Wardrobe: " + names[accessoryIndex]);
+            prefs.edit().putInt("accessory_index", accessoryIndex).apply();
         });
 
-        addAction(actions, "Talk", Color.rgb(94, 196, 152), this::requestMicOrStart);
+        addAction(actions, "Talk", Color.rgb(94, 196, 152), () -> {
+            currentRoom = "home";
+            characterView.setRoom(currentRoom);
+            requestMicOrStart();
+        });
 
         addAction(actions, "Play", Color.rgb(244, 126, 105), () -> {
             happy = clamp(happy + 12);
@@ -384,6 +403,8 @@ public class MainActivity extends Activity {
             updateBars();
 
             playVariant = (playVariant + 1) % 4;
+            currentRoom = (playVariant == 3) ? "school" : "play";
+            characterView.setRoom(currentRoom);
             if (playVariant == 0) {
                 setBubble("Meow! Jump!");
                 characterView.react("jump");
@@ -722,7 +743,11 @@ public class MainActivity extends Activity {
     }
 
     private void updateStars() {
-        if (starText != null) starText.setText("⭐ " + stars + "   Daily rewards ON");
+        if (starText != null) {
+            int level = 1 + (stars / 25);
+            int xp = stars % 25;
+            starText.setText("⭐ " + stars + "   LV " + level + "  •  " + xp + "/25");
+        }
     }
 
     private void setBubble(String message) {
@@ -746,6 +771,7 @@ public class MainActivity extends Activity {
                 .putInt("stars", stars)
                 .putInt("voice_preset", voicePreset)
                 .putInt("theme_index", themeIndex)
+                .putInt("accessory_index", accessoryIndex)
                 .putLong("last_seen", System.currentTimeMillis())
                 .apply();
     }
