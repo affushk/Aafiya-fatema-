@@ -7,7 +7,7 @@
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:transparent}
 #stage{position:relative;width:100%;height:100%;overflow:hidden;
 background:
-radial-gradient(circle at 50% 25%,rgba(255,255,255,.99) 0%,rgba(255,250,253,.97) 40%,rgba(246,239,249,.97) 76%,rgba(237,231,247,.99) 100%)}
+radial-gradient(circle at 50% 27%,rgba(255,252,255,.99) 0%,rgba(250,242,250,.98) 42%,rgba(237,229,246,.98) 78%,rgba(229,220,241,.99) 100%)}
 canvas{display:block;width:100%;height:100%;touch-action:none}
 #status{position:absolute;left:50%;top:48%;transform:translate(-50%,-50%);
 padding:10px 15px;border-radius:18px;background:rgba(255,255,255,.92);
@@ -142,11 +142,11 @@ box-shadow:0 8px 25px rgba(90,60,90,.08);pointer-events:none}
             '  float mx=max(c.r,max(c.g,c.b));',
             '  float mn=min(c.r,min(c.g,c.b));',
             '  float sat=(mx-mn)/(mx+0.0001);',
-            '  vec3 whiteFur=mix(vec3(0.78,0.77,0.80),vec3(0.99,0.985,1.0),smoothstep(0.08,0.92,lum));',
-            '  float darkMask=1.0-smoothstep(0.17,0.33,lum);',
-            '  vec3 darkDetail=vec3(0.055,0.045,0.070);',
-            '  float pinkMask=smoothstep(0.34,0.58,c.r-c.g)*smoothstep(0.22,0.76,lum)*(1.0-smoothstep(0.78,0.94,lum));',
-            '  vec3 softPink=vec3(1.0,0.56,0.66);',
+            '  vec3 whiteFur=mix(vec3(0.70,0.70,0.75),vec3(0.985,0.98,0.995),smoothstep(0.10,0.88,lum));',
+            '  float darkMask=1.0-smoothstep(0.22,0.40,lum);',
+            '  vec3 darkDetail=vec3(0.025,0.020,0.035);',
+            '  float pinkMask=smoothstep(0.28,0.52,c.r-c.g)*smoothstep(0.18,0.80,lum)*(1.0-smoothstep(0.80,0.95,lum));',
+            '  vec3 softPink=vec3(1.0,0.46,0.58);',
             '  vec3 mapped=mix(whiteFur,softPink,pinkMask*0.72);',
             '  mapped=mix(mapped,darkDetail,darkMask);',
             '  diffuseColor*=vec4(mapped,t.a);',
@@ -222,10 +222,23 @@ box-shadow:0 8px 25px rgba(90,60,90,.08);pointer-events:none}
     o.quaternion.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(x||0,y||0,z||0)));
   }
 
+  function visibleMeshBox(){
+    const box=new THREE.Box3();
+    let found=false;
+    catRoot.updateMatrixWorld(true);
+    catRoot.traverse(function(o){
+      if(!o.isMesh || !o.geometry)return;
+      if(!o.geometry.boundingBox)o.geometry.computeBoundingBox();
+      if(!o.geometry.boundingBox)return;
+      const b=o.geometry.boundingBox.clone().applyMatrix4(o.matrixWorld);
+      if(!found){box.copy(b);found=true;}else box.union(b);
+    });
+    return found?box:new THREE.Box3().setFromObject(catRoot);
+  }
+
   function frameCat(){
     if(!catRoot)return;
-    catRoot.updateMatrixWorld(true);
-    const box=new THREE.Box3().setFromObject(catRoot);
+    const box=visibleMeshBox();
     const size=box.getSize(new THREE.Vector3());
     const center=box.getCenter(new THREE.Vector3());
     if(!isFinite(size.y)||size.y<=.001)return;
@@ -234,11 +247,13 @@ box-shadow:0 8px 25px rgba(90,60,90,.08);pointer-events:none}
     const hFov=2*Math.atan(Math.tan(vFov/2)*Math.max(.35,camera.aspect));
     const distH=(size.y*.5)/Math.tan(vFov/2);
     const distW=(size.x*.5)/Math.tan(hFov/2);
-    const dist=Math.max(distH,distW)*1.28;
 
-    targetY=center.y+size.y*.015;
+    // Leave comfortable space around ears, paws and speech bubble.
+    const dist=Math.max(distH,distW)*1.52;
+    targetY=center.y-size.y*.025;
+
     camera.position.set(center.x,targetY+size.y*.015,center.z+dist);
-    camera.near=Math.max(.02,dist/100);
+    camera.near=Math.max(.02,dist/120);
     camera.far=dist+25;
     camera.lookAt(center.x,targetY,center.z);
     camera.updateProjectionMatrix();
@@ -250,7 +265,7 @@ box-shadow:0 8px 25px rgba(90,60,90,.08);pointer-events:none}
     catRoot.rotation.set(0,0,0);
     catRoot.updateMatrixWorld(true);
 
-    let box=new THREE.Box3().setFromObject(catRoot);
+    let box=visibleMeshBox();
     let size=box.getSize(new THREE.Vector3());
     if(size.y<=.001)return;
 
@@ -258,7 +273,7 @@ box-shadow:0 8px 25px rgba(90,60,90,.08);pointer-events:none}
     catRoot.scale.set(scale*1.04,scale*.98,scale*1.04);
     catRoot.updateMatrixWorld(true);
 
-    box.setFromObject(catRoot);
+    box=visibleMeshBox();
     const center=box.getCenter(new THREE.Vector3());
     catRoot.position.x-=center.x;
     catRoot.position.z-=center.z;
