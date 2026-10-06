@@ -10,8 +10,8 @@ android {
         applicationId 'com.altaf.aafiyafatema'
         minSdk 24
         targetSdk 35
-        versionCode 19
-        versionName '8.1-real-walk-interactions'
+        versionCode 20
+        versionName '8.2-polished-movement'
     }
 
     buildTypes {
