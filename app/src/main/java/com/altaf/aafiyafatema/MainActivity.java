@@ -94,10 +94,10 @@ public class MainActivity extends Activity {
         public void run() {
             if (modelReady && !recording && !speaking && characterView != null) {
                 String[] lines = {
-                        "Aafiya yahan hai!",
+                        "Meow! Main yahan hoon",
                         "Mere head par tap karo",
-                        "Hee hee... play karein?",
-                        "Assalamualaikum!"
+                        "Play karein? Meow!",
+                        "Aafiya ki kitty ready!"
                 };
                 setBubble(lines[idleIndex % lines.length]);
                 if ((idleIndex & 1) == 0) characterView.wave();
@@ -259,13 +259,13 @@ public class MainActivity extends Activity {
             @Override
             public void onModelReady() {
                 modelReady = true;
-                setBubble("Tap head, tummy ya feet!");
+                setBubble("Kitty ready! Head, tummy ya paws tap karo");
             }
 
             @Override
             public void onModelError(String message) {
                 modelReady = false;
-                setBubble("3D load issue - internet check karo");
+                setBubble("Kitty load issue - internet check karo");
             }
         });
         stage.addView(characterView, new FrameLayout.LayoutParams(
@@ -273,7 +273,7 @@ public class MainActivity extends Activity {
                 FrameLayout.LayoutParams.MATCH_PARENT));
 
         bubble = new TextView(this);
-        bubble.setText("Aafiya Fatema loading...");
+        bubble.setText("Cute white kitty loading...");
         bubble.setTextSize(15);
         bubble.setTextColor(Color.rgb(101, 66, 111));
         bubble.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
@@ -287,12 +287,12 @@ public class MainActivity extends Activity {
         stage.addView(bubble, bubbleLp);
 
         TextView live = new TextView(this);
-        live.setText("LIVE 3D");
+        live.setText("WHITE CAT 3D");
         live.setTextSize(10);
         live.setTextColor(Color.WHITE);
         live.setGravity(Gravity.CENTER);
         live.setBackground(roundRect(Color.rgb(222, 77, 142), dp(12)));
-        FrameLayout.LayoutParams liveLp = new FrameLayout.LayoutParams(dp(70), dp(26));
+        FrameLayout.LayoutParams liveLp = new FrameLayout.LayoutParams(dp(92), dp(26));
         liveLp.gravity = Gravity.TOP | Gravity.END;
         liveLp.topMargin = dp(7);
         liveLp.rightMargin = dp(7);
@@ -311,7 +311,7 @@ public class MainActivity extends Activity {
             happy = clamp(happy + 3);
             earnStars(1);
             updateBars();
-            setBubble("Yummy! Aur khilao");
+            setBubble("Meow! Yummy!");
             characterView.eat();
             saveState();
         });
@@ -321,7 +321,7 @@ public class MainActivity extends Activity {
             happy = clamp(happy + 2);
             earnStars(1);
             updateBars();
-            setBubble("Splish splash!");
+            setBubble("Meow! Clean & fresh!");
             characterView.bath();
             saveState();
         });
@@ -330,14 +330,14 @@ public class MainActivity extends Activity {
             sleep = clamp(sleep + 18);
             happy = clamp(happy + 1);
             updateBars();
-            setBubble("Good night... zzz");
+            setBubble("Kitty sleepy... zzz");
             characterView.sleep();
             saveState();
         });
 
-        addAction(actions, "Dress", Color.rgb(232, 100, 157), () -> {
+        addAction(actions, "Style", Color.rgb(232, 100, 157), () -> {
             earnStars(1);
-            setBubble("Wardrobe next: pink, lavender, cream");
+            setBubble("Kitty style accessories coming next");
             characterView.showEffect("star");
         });
 
@@ -349,7 +349,7 @@ public class MainActivity extends Activity {
             sleep = clamp(sleep - 2);
             earnStars(2);
             updateBars();
-            setBubble("Hee hee! Let's play!");
+            setBubble("Meow! Let's play!");
             characterView.happy();
             saveState();
         });
@@ -365,16 +365,16 @@ public class MainActivity extends Activity {
         if ("head".equals(zone)) {
             happy = clamp(happy + 3);
             earnStars(1);
-            setBubble("Aww... head pat!");
+            setBubble("Purr... head pat!");
             characterView.happy();
         } else if ("belly".equals(zone)) {
             happy = clamp(happy + 4);
-            setBubble("Hee hee! Tickles!");
+            setBubble("Meow! Tummy tickles!");
             characterView.showEffect("heart");
             characterView.wave();
         } else {
             happy = clamp(happy + 2);
-            setBubble("Feet tickle! Hee hee!");
+            setBubble("Paws tickle! Meow!");
             characterView.wave();
         }
         updateBars();
@@ -481,7 +481,7 @@ public class MainActivity extends Activity {
 
             speaking = true;
             characterView.setSpeaking(true);
-            setBubble("Aafiya: " + voiceNames[voicePreset] + " voice");
+            setBubble("Kitty repeats: " + voiceNames[voicePreset]);
             happy = clamp(happy + 5);
             earnStars(2);
             updateBars();
@@ -491,7 +491,7 @@ public class MainActivity extends Activity {
                 characterView.setSpeaking(false);
                 try { mp.release(); } catch (Throwable ignored) { }
                 player = null;
-                setBubble("Hee hee! Phir se bolo!");
+                setBubble("Meow! Phir se bolo!");
                 characterView.wave();
                 saveState();
             });
