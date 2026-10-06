@@ -34,6 +34,7 @@ public class MainActivity extends Activity {
     private final String[] voiceNames = {"Cute", "Tiny", "Funny", "Deep", "Normal"};
     private final float[] voicePitch = {1.34f, 1.55f, 1.16f, 0.88f, 1.00f};
     private final float[] voiceSpeed = {1.03f, 1.08f, 1.16f, 0.95f, 1.00f};
+    private final String[] themeNames = {"Pink", "Sky", "Cream", "Mint"};
 
     private PremiumAvatarView characterView;
     private TextView bubble, starText;
@@ -41,7 +42,7 @@ public class MainActivity extends Activity {
     private Button voiceButton;
 
     private SharedPreferences prefs;
-    private int happy, food, sleep, clean, stars, voicePreset;
+    private int happy, food, sleep, clean, stars, voicePreset, themeIndex;
     private boolean muted = false;
     private boolean recording = false;
     private boolean speaking = false;
@@ -93,15 +94,32 @@ public class MainActivity extends Activity {
         @Override
         public void run() {
             if (modelReady && !recording && !speaking && characterView != null) {
-                String[] lines = {
-                        "Meow! Main yahan hoon",
-                        "Mere head par tap karo",
-                        "Play karein? Meow!",
-                        "Aafiya ki kitty ready!"
-                };
-                setBubble(lines[idleIndex % lines.length]);
-                if ((idleIndex & 1) == 0) characterView.wave();
-                else characterView.happy();
+                if (food < 22) {
+                    setBubble("Meow... mujhe bhook lagi hai");
+                    characterView.react("hungry");
+                    characterView.showEffect("food");
+                } else if (sleep < 18) {
+                    setBubble("Mujhe neend aa rahi hai... zzz");
+                    characterView.sleep();
+                } else if (clean < 18) {
+                    setBubble("Bath time? 🫧");
+                    characterView.react("bath");
+                    characterView.showEffect("bath");
+                } else if (happy < 22) {
+                    setBubble("Thoda play karein?");
+                    characterView.react("sad");
+                } else {
+                    String[] lines = {
+                            "Meow! Main yahan hoon",
+                            "Mere head par tap karo",
+                            "Double tap karke dekho!",
+                            "Long press = cuddle 💗",
+                            "Swipe karke pet karo"
+                    };
+                    setBubble(lines[idleIndex % lines.length]);
+                    if ((idleIndex & 1) == 0) characterView.wave();
+                    else characterView.happy();
+                }
                 idleIndex++;
             }
             handler.postDelayed(this, 8500);
@@ -145,7 +163,9 @@ public class MainActivity extends Activity {
         clean = prefs.getInt("clean", 88);
         stars = prefs.getInt("stars", 25);
         voicePreset = prefs.getInt("voice_preset", 0);
+        themeIndex = prefs.getInt("theme_index", 0);
         if (voicePreset < 0 || voicePreset >= voiceNames.length) voicePreset = 0;
+        if (themeIndex < 0 || themeIndex >= themeNames.length) themeIndex = 0;
 
         long now = System.currentTimeMillis();
         long last = prefs.getLong("last_seen", now);
@@ -194,6 +214,7 @@ public class MainActivity extends Activity {
         sound.setOnClickListener(v -> {
             muted = !muted;
             sound.setText(muted ? "OFF" : "SND");
+            if (characterView != null) characterView.setSoundEnabled(!muted);
             setBubble(muted ? "Sound off" : "Sound on");
         });
         header.addView(sound, new LinearLayout.LayoutParams(dp(58), dp(46)));
@@ -259,7 +280,9 @@ public class MainActivity extends Activity {
             @Override
             public void onModelReady() {
                 modelReady = true;
-                setBubble("Kitty ready! Head, tummy ya paws tap karo");
+                characterView.setSoundEnabled(!muted);
+                characterView.setTheme(themeIndex);
+                setBubble("Kitty ready! Tap, double-tap, long-press ya pet karo");
             }
 
             @Override
@@ -336,9 +359,11 @@ public class MainActivity extends Activity {
         });
 
         addAction(actions, "Style", Color.rgb(232, 100, 157), () -> {
-            earnStars(1);
-            setBubble("Kitty style accessories coming next");
+            themeIndex = (themeIndex + 1) % themeNames.length;
+            characterView.setTheme(themeIndex);
             characterView.showEffect("star");
+            setBubble("Style: " + themeNames[themeIndex]);
+            prefs.edit().putInt("theme_index", themeIndex).apply();
         });
 
         addAction(actions, "Talk", Color.rgb(94, 196, 152), this::requestMicOrStart);
@@ -350,7 +375,7 @@ public class MainActivity extends Activity {
             earnStars(2);
             updateBars();
             setBubble("Meow! Let's play!");
-            characterView.happy();
+            characterView.play();
             saveState();
         });
 
@@ -362,21 +387,83 @@ public class MainActivity extends Activity {
 
     private void reactToTouch(String zone) {
         if (recording || speaking || characterView == null) return;
-        if ("head".equals(zone)) {
-            happy = clamp(happy + 3);
-            earnStars(1);
-            setBubble("Purr... head pat!");
-            characterView.happy();
-        } else if ("belly".equals(zone)) {
-            happy = clamp(happy + 4);
-            setBubble("Meow! Tummy tickles!");
-            characterView.showEffect("heart");
-            characterView.wave();
-        } else {
-            happy = clamp(happy + 2);
-            setBubble("Paws tickle! Meow!");
-            characterView.wave();
+
+        switch (zone) {
+            case "ear_left":
+            case "ear_right":
+                happy = clamp(happy + 2);
+                setBubble("Ear twitch! Meow!");
+                characterView.react("ear");
+                characterView.playPetSound("chirp");
+                break;
+
+            case "nose":
+                happy = clamp(happy + 2);
+                setBubble("Boop! 😺");
+                characterView.react("nose");
+                characterView.playPetSound("boop");
+                break;
+
+            case "head":
+                happy = clamp(happy + 4);
+                earnStars(1);
+                setBubble("Purr... head pat!");
+                characterView.react("headpat");
+                characterView.playPetSound("purr");
+                characterView.showEffect("heart");
+                break;
+
+            case "belly":
+                happy = clamp(happy + 5);
+                setBubble("Tummy tickles! Meow!");
+                characterView.react("belly");
+                characterView.playPetSound("chirp");
+                characterView.showEffect("heart");
+                break;
+
+            case "paw_left":
+            case "paw_right":
+                happy = clamp(happy + 3);
+                setBubble("High paw! 🐾");
+                characterView.react("paw");
+                characterView.playPetSound("meow");
+                break;
+
+            case "cuddle":
+                happy = clamp(happy + 7);
+                earnStars(2);
+                setBubble("Prrrr... cuddle mode 💗");
+                characterView.react("cuddle");
+                characterView.playPetSound("purr");
+                characterView.showEffect("heart");
+                break;
+
+            case "double":
+                happy = clamp(happy + 6);
+                earnStars(2);
+                food = clamp(food - 1);
+                sleep = clamp(sleep - 1);
+                setBubble("Woohoo! Double tap jump!");
+                characterView.react("jump");
+                characterView.showEffect("star");
+                characterView.playPetSound("chirp");
+                break;
+
+            case "pet":
+                happy = clamp(happy + 5);
+                setBubble("Purr... aur pet karo");
+                characterView.react("pet");
+                characterView.playPetSound("purr");
+                characterView.showEffect("heart");
+                break;
+
+            default:
+                happy = clamp(happy + 2);
+                characterView.happy();
+                setBubble("Meow!");
+                break;
         }
+
         updateBars();
         saveState();
     }
@@ -618,6 +705,7 @@ public class MainActivity extends Activity {
                 .putInt("clean", clean)
                 .putInt("stars", stars)
                 .putInt("voice_preset", voicePreset)
+                .putInt("theme_index", themeIndex)
                 .putLong("last_seen", System.currentTimeMillis())
                 .apply();
     }
