@@ -85,7 +85,7 @@ opacity:0;animation:smileGlow .9s ease-out forwards}
   const touchLayer=document.getElementById('touchLayer');
   const accessoryLayer=document.getElementById('accessoryLayer');
 
-  let renderer,scene,camera,clock,mixer,cat,catRoot;
+  let renderer,scene,camera,clock,mixer,cat,catRoot,petShadow;
   let currentAction=null;
   let state='idle',stateUntil=0,ready=false;
   let baseY=0,targetY=.7;
@@ -493,6 +493,15 @@ opacity:0;animation:smileGlow .9s ease-out forwards}
     floor.position.y=-.004;
     floor.receiveShadow=true;
     scene.add(floor);
+
+    const shadowMat=new THREE.MeshBasicMaterial({
+      color:0x5f4b68,transparent:true,opacity:.16,depthWrite:false
+    });
+    petShadow=new THREE.Mesh(new THREE.CircleGeometry(.46,48),shadowMat);
+    petShadow.rotation.x=-Math.PI/2;
+    petShadow.scale.z=.58;
+    petShadow.position.set(0,.002,.04);
+    scene.add(petShadow);
 
     resize();
     createRoom3D('home');
@@ -1051,6 +1060,16 @@ opacity:0;animation:smileGlow .9s ease-out forwards}
 
       const lookX=Math.max(-.08,Math.min(.08,catRoot.position.x*.055));
       camera.lookAt(lookX,targetY+cameraLookYOffset,catRoot.position.z-.10);
+
+      if(petShadow){
+        petShadow.position.x=catRoot.position.x;
+        petShadow.position.z=catRoot.position.z+.03;
+        const lift=Math.max(0,catRoot.position.y-baseY);
+        petShadow.material.opacity=Math.max(.06,.16-lift*.75);
+        const sh=Math.max(.72,1-lift*1.7);
+        petShadow.scale.set(sh,.58*sh,sh);
+      }
+
       updateAccessoryOverlay();
     }
     renderer.render(scene,camera);
